@@ -10,11 +10,7 @@ const std::vector<const char*> deviceExtensions = {
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-#ifdef NDEBUG // C++ standart macro
-    const bool enableValidationLayers = false;
-#else
-    const bool enableValidationLayers = true;
-#endif
+
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily; // draw calls family
@@ -183,7 +179,7 @@ private:
             vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
-        
+
         vkDestroyCommandPool(device, commandPool, nullptr);
 
         for (auto framebuffer : swapChainFramebuffers) {
@@ -245,6 +241,7 @@ private:
         }else{
             createInfo.enabledLayerCount = 0;
         }
+
 
 
         // optional - check supported extensions
