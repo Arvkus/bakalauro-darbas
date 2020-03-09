@@ -12,7 +12,3 @@ del bin\*.ilk *.obj *.pdb
 del bin\*.pdb
 
 REM lib\vulkan-1.lib
-
-REM cd bin
-REM main.exe
-REM cd .. 

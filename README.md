@@ -36,4 +36,23 @@
 Check out
 RAII, initializer lists
 
+C:/"Program Files (x86)"/"Microsoft SDKs"/Windows/v10.0A/bin/"NETFX 4.7.2 Tools"/ResGen.exe
+http://forums.codeblocks.org/index.php?topic=11128.0
 
+
+
+shader compile auto
+for /r %%i in (*.frag, *.vert) do %VULKAN_SDK%/Bin/glslangValidator.exe -V %%i
+
+`VkInstance` - connection between program and Vulkan library
+
+
+
+`vkInstanceCreateInfo` - create application
+    * vkApplicationInfo
+    * glfwGetRequiredInstanceExtensions
+    * validation layers
+`vkPhysicalDevice` - select physical device
+    * find suitable device
+    * find queue families
+`vkDevice` - create logical device
