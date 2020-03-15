@@ -1,27 +1,10 @@
-#ifdef NDEBUG // C++ standart macro
-    const bool enableValidationLayers = false;
-#else
-    const bool enableValidationLayers = true;
-#endif
+const bool isDebug = true;
 
 #include "common.hpp"
 #include "application.hpp"
 
-void testing(){
-    std::cout<< VK_API_VERSION_1_0 << std::endl;
-    std::cout<< VK_MAKE_VERSION(1,0,0) << std::endl;
-    std::cout<< VK_MAKE_VERSION( 1, 0, VK_HEADER_VERSION ) << std::endl;
-    std::cin.get();
-}
+int main() {
 
-#ifdef NDEBUG 
-    int WinMain(){
-#else
-    int main() {
-#endif
-
-    //testing();
-    //return EXIT_SUCCESS;
 
     Application app;
     
@@ -32,6 +15,8 @@ void testing(){
         std::cin.get();
         return EXIT_FAILURE;
     }
-
+    std::cin.get();
     return EXIT_SUCCESS;
+    
+    
 }
