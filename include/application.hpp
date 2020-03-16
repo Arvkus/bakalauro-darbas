@@ -261,6 +261,7 @@ private:
         createSyncObjects();
     }
 
+
     void recreate_swapchain(){
 
         int width = 0, height = 0; // window minimize case
@@ -283,15 +284,35 @@ private:
         createCommandBuffers();
     }
 
+    //----------------------------------------------------------
+
     void mainLoop(){
+
+                
+        initVulkan();
+
+        uint32_t frameCount = 0;
+        double timeBegin = glfwGetTime();
+
         while(!glfwWindowShouldClose(window)) {
+            
             glfwPollEvents();
             drawFrame();
+
+            frameCount++;
+            if(glfwGetTime() - timeBegin >= 1.0 ){
+                //std::string title = "Vulkan window (" + std::to_string(frameCount) + ')'; 
+                //glfwSetWindowTitle(this->window, title.c_str());
+                timeBegin = glfwGetTime();
+                frameCount = 0;
+            }
         }
 
         // wait to empty queues
         vkDeviceWaitIdle(this->device);
     }
+
+    //----------------------------------------------------------
 
     void cleanupSwapchain(){
         
