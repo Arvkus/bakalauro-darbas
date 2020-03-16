@@ -63,7 +63,9 @@
         "optional": "cpp",
         "set": "cpp",
         "fstream": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "chrono": "cpp",
+        "ratio": "cpp"
     },
     "terminal.integrated.shell.windows": "cmd.exe"
 }

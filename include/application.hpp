@@ -98,9 +98,12 @@ struct SwapChainSupportDetails {
     // dimensions of an image
 
     VkExtent2D chooseImageExtent() {
+        //printf("capabilities: %i %i \n", this->capabilities.currentExtent.width, this->capabilities.currentExtent.height);
+       
         if (this->capabilities.currentExtent.width != UINT32_MAX) {
             return capabilities.currentExtent;
         } else {
+            // glfwGetWindowSize(window, &width, &height);
             VkExtent2D actualExtent = {800, 600};
 
             actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
@@ -183,6 +186,7 @@ public:
 
 class Application {
 public:
+    
     void run() {
         initWindow();
 
@@ -206,7 +210,7 @@ private:
     Queues queues;
 
     SwapChainSupportDetails swapChainDetails;
-    VkSwapchainKHR swapchain;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
 
@@ -238,6 +242,8 @@ private:
         // set pos to middle
         const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
         glfwSetWindowPos(window, (mode->width - 800) / 2, (mode->height - 600) / 2 );
+
+        //glfwSetWindowSizeCallback(window, size_callback);
     }
 
     void initVulkan(){
@@ -253,7 +259,28 @@ private:
         createCommandPool();
         createCommandBuffers();
         createSyncObjects();
-        
+    }
+
+    void recreate_swapchain(){
+
+        int width = 0, height = 0; // window minimize case
+        glfwGetFramebufferSize(window, &width, &height);
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(window, &width, &height);
+            glfwWaitEvents();
+        }
+
+        printf("\n--- swapchain recreation ---\n");
+        vkDeviceWaitIdle(this->device);
+
+        cleanupSwapchain();
+
+        createSwapchain();
+        createImageViews();
+        createRenderPass();
+        createGraphicsPipeline();
+        createFrameBuffers();
+        createCommandBuffers();
     }
 
     void mainLoop(){
@@ -266,7 +293,28 @@ private:
         vkDeviceWaitIdle(this->device);
     }
 
+    void cleanupSwapchain(){
+        
+        // free command buffers because they relate to framebuffers
+        vkFreeCommandBuffers(this->device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+        for (const auto &framebuffer : swapchainFramebuffers) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+
+        vkDestroyPipeline(device, graphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        vkDestroyRenderPass(device, renderPass, nullptr);
+
+        for (const auto &imageView : swapchainImageViews) {
+            vkDestroyImageView(device, imageView, nullptr);
+        }
+
+        vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
+    }
+
     void cleanup(){
+        cleanupSwapchain();
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -274,22 +322,8 @@ private:
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
 
-        vkDestroyCommandPool(device, this->commandPool, nullptr);
+        vkDestroyCommandPool(this->device, this->commandPool, nullptr);
 
-        for (auto framebuffer : swapchainFramebuffers) {
-            vkDestroyFramebuffer(device, framebuffer, nullptr);
-        }
-
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-
-        vkDestroyRenderPass(device, renderPass, nullptr);
-
-        for (auto imageView : swapchainImageViews) {
-            vkDestroyImageView(device, imageView, nullptr);
-        }
-
-        vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
         vkDestroyDevice(this->device, nullptr);
         vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
         vkDestroyInstance(this->instance, nullptr);
@@ -350,7 +384,7 @@ private:
         for(const char* requiredLayer : validationLayers){
             bool layerFound = false;
 
-            for(VkLayerProperties& layerInfo : availableLayers){
+            for(const VkLayerProperties& layerInfo : availableLayers){
                 if(std::strcmp(layerInfo.layerName, requiredLayer) == 0 ){
                     layerFound = true;
                 }
@@ -385,10 +419,10 @@ private:
         vkEnumeratePhysicalDevices(this->instance, &deviceCount, devices.data());
 
         printf("\nFound physical (%i) devices: \n", deviceCount);
-        for (const auto& device : devices) {
+        for (const VkPhysicalDevice& device : devices) {
             
             if (isDeviceSuitable(device)) {
-                physicalDevice = device;
+                this->physicalDevice = device;
                 printf("Device is suitable \n");
                 break; // pick first available
             }
@@ -440,6 +474,7 @@ private:
     }
 
     bool isDeviceExtensionsSupported(const VkPhysicalDevice &device){
+        // need swapchain extension
         uint32_t extensionCount = 0;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -449,20 +484,21 @@ private:
         // what extensions device supports
         // for(VkExtensionProperties &properties : availableExtensions) printf("%s\n", properties.extensionName);
 
-        std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+        bool isSupported = true;
+        for(const char* requiredExtensionName : deviceExtensions){
+            bool extensionFound = false;
 
-        for (const VkExtensionProperties &extension : availableExtensions) {
-            // loop through available extensions and delete it if it's inside required extensions
-            requiredExtensions.erase(extension.extensionName); 
+            for (const VkExtensionProperties &availableExtension : availableExtensions) {
+                if( std::strcmp(requiredExtensionName, availableExtension.extensionName) == 0 ) extensionFound = true;
+            }
+
+            if(extensionFound == false){
+                printf("Extension is not supported: %s\n", requiredExtensionName);
+                isSupported = false;
+            }
         }
         
-        int i = 0;
-        for (std::set<std::string>::iterator i = requiredExtensions.begin(); i != requiredExtensions.end(); i++) {
-            std::string element = *i;
-            std::cout<< "Extension is not supported: " << element << std::endl;
-        }
-
-        return requiredExtensions.empty();
+        return isSupported;
     }
 
     //-----------------------------------------------------------------------------
@@ -519,6 +555,7 @@ private:
     */
 
     void createSwapchain(){
+        this->swapChainDetails.querySwapchainSupport(this->physicalDevice, this->surface); // get new swapchain details
         
         //  this could be: check for support, fill create info with hard-coded values
         VkSurfaceFormatKHR surfaceFormat = this->swapChainDetails.chooseSwapSurfaceFormat();
@@ -531,20 +568,21 @@ private:
         createInfo.imageFormat = surfaceFormat.format;
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
         createInfo.imageExtent = this->swapChainDetails.chooseImageExtent();
+        printf("Extent size: %i %i \n", createInfo.imageExtent.width, createInfo.imageExtent.height);
 
         createInfo.imageArrayLayers = 1; // always 1 layer, 2 layers are for stereoscopic 3D application
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // render directly
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // specifies that the image can be used to create a VkImageView, use as a color
 
         // specify if transform should be applied, currentTransfrom = no transform
         // VkSurfaceTransformFlagBitsKHR enumeration
-        createInfo.preTransform = this->swapChainDetails.capabilities.currentTransform; 
+        createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; //this->swapChainDetails.capabilities.currentTransform; 
 
         // alpha channel use with other windows, ignore it
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; 
 
         createInfo.presentMode = this->swapChainDetails.chooseSwapPresentMode();
         createInfo.clipped = VK_TRUE; // if pixels are obscured, clip them
-        createInfo.oldSwapchain = VK_NULL_HANDLE; // if window resizes, need to recreate swapchain
+        createInfo.oldSwapchain = VK_NULL_HANDLE; // VK_NULL_HANDLE or swapchain; // if window resizes, need to recreate swapchain
 
         uint32_t queueFamilyIndices[] = {
             this->queues.graphicsFamilyIndex.value(),
@@ -565,9 +603,11 @@ private:
         }
         
         // swap chain also auto-creates images
-        if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, &this->swapchain) == VK_SUCCESS) {
+        VkResult result = vkCreateSwapchainKHR(this->device, &createInfo, nullptr, &this->swapchain);
+        if (result == VK_SUCCESS) {
             printf("Created swapchain \n");
         }else{
+            std::cout<< "swapchain error code: " << result << std::endl; // VK_ERROR_VALIDATION_FAILED_EXT
             throw std::runtime_error("failed to create swap chain!");
         }
 
@@ -610,18 +650,20 @@ private:
     }
 
     void createRenderPass(){
-        // framebuffers attachment
-        // how many color and depth buffers there will be, 
-        // how many samples to use for each of them and how their contents should be handled throughout the rendering operations
+        /*
+            Render pass is set of attachments, dependencies, subpasses
+            Attachment - describe how content is treated at the start/end of each render pass instance, including format, sample count
+            Subpass - render commands are recorded into supbass
+            Dependency - describe execution and memory dependencies between subpasses.
 
-        // further process image or display to user
-        // postprocessing or composition, rendering user interface elements
-        // render result into an image
+            Attacjment types: output (color, depth/stencil), input, resolve (no read/write, preserve content)
 
-        //----------------------
+            The actual images to be used are provided when the render pass is used, via the VkFrameBuffer
+            Render pass is wrapped into framebuffer
+        */
 
         VkAttachmentDescription colorAttachment = {}; 
-        colorAttachment.format = this->swapChainDetails.chooseSwapSurfaceFormat().format;
+        colorAttachment.format = this->swapChainDetails.chooseSwapSurfaceFormat().format; // VK_FORMAT_B8G8R8A8_SRGB
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT; // number of samples
 
         // what to do with data before/after rendering
@@ -645,7 +687,8 @@ private:
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
 
-        //-- image layout transition
+        //----------------------
+        // specify memory and execution dependencies between subpasses
         VkSubpassDependency dependency = {};
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
@@ -678,6 +721,7 @@ private:
 
     void createGraphicsPipeline(){
         // dynamic things in pipeline: size of the viewport, line width and blend constants
+        // stages - https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkPipelineStageFlagBits.html
 
         std::vector<char> vertShaderCode = readFile("shaders/vert.spv");
         std::vector<char> fragShaderCode = readFile("shaders/frag.spv");
@@ -981,7 +1025,17 @@ private:
 
         // take image from the swapchain
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        VkResult result;
+        
+        result = vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+        if(result == VK_ERROR_OUT_OF_DATE_KHR){
+            printf("swapchain out of date \n");
+            this->recreate_swapchain();
+            return;
+        } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+            throw std::runtime_error("failed to acquire swap chain image!");
+        }
 
         // submit command buffer to queue
         VkSubmitInfo submitInfo = {};
@@ -1018,7 +1072,13 @@ private:
 
         presentInfo.pResults = nullptr; // Optional
 
-        vkQueuePresentKHR(this->queues.presentQueue, &presentInfo);
+        result = vkQueuePresentKHR(this->queues.presentQueue, &presentInfo);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+            this->recreate_swapchain();
+        } else if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to present swap chain image!");
+        }
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     };
