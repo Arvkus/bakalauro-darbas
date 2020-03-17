@@ -91,8 +91,7 @@ Create the depth buffer image object
 
 Allocate the depth buffer device memory
 
-Bind the memory to the image object
-
+Bind the memory to the image object  
 Create the depth buffer image view
 
 
