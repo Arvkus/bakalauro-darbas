@@ -25,5 +25,6 @@
 #include <bitset>
 #include <string>  
 #include <chrono>
+#include <array>
 
 #include "utilities.hpp"

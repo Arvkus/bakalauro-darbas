@@ -230,7 +230,16 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight; // only required if MAX_FRAMES_IN_FLIGHT > swapchainImages
 
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
     size_t currentFrame = 0;
+
+    const std::vector<Vertex> vertices = {
+        Vertex(glm::vec3( 0.0,-0.5, 0.0), glm::vec3(1,0,0), glm::vec2(0,0)),
+        Vertex(glm::vec3( 0.5, 0.5, 0.0), glm::vec3(0,1,0), glm::vec2(0,0)),
+        Vertex(glm::vec3(-0.5, 0.5, 0.0), glm::vec3(0,0,1), glm::vec2(0,0)),
+    };
 
     void initWindow(){
         glfwInit();
@@ -257,6 +266,7 @@ private:
         createGraphicsPipeline();
         createFrameBuffers();
         createCommandPool();
+        createVertexBuffer();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -288,9 +298,6 @@ private:
 
     void mainLoop(){
 
-                
-        initVulkan();
-
         uint32_t frameCount = 0;
         double timeBegin = glfwGetTime();
 
@@ -298,14 +305,15 @@ private:
             
             glfwPollEvents();
             drawFrame();
-
+            
             frameCount++;
             if(glfwGetTime() - timeBegin >= 1.0 ){
-                //std::string title = "Vulkan window (" + std::to_string(frameCount) + ')'; 
-                //glfwSetWindowTitle(this->window, title.c_str());
+                std::string title = "Vulkan window (" + std::to_string(frameCount) + ')'; 
+                glfwSetWindowTitle(this->window, title.c_str());
                 timeBegin = glfwGetTime();
                 frameCount = 0;
             }
+            
         }
 
         // wait to empty queues
@@ -336,6 +344,9 @@ private:
 
     void cleanup(){
         cleanupSwapchain();
+
+        vkDestroyBuffer(device, vertexBuffer, nullptr);
+        vkFreeMemory(device, vertexBufferMemory, nullptr);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -765,14 +776,18 @@ private:
 
         VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-
         // define if data is per-vertex or per-instance, what data to load
+        auto bindingDescription = Vertex::getBindingDescription();
+        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional , details for loading verticex
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional , details for loading verticex
+
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; 
+
+        vertexInputInfo.vertexAttributeDescriptionCount = (uint32_t)attributeDescriptions.size();
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); 
 
         // what geometry to draw, and if primitive restart should be enabled
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -922,13 +937,9 @@ private:
     }
 
     void createCommandPool(){
-        // operations and memory transfers
-
-        // cant use commands directly
-        // record all operations i want to use
-        // setting up commands can be done in advance (hard work)
-
-        // command pool - manage the memory that is used to store the buffers, buffers are allocated to pool
+        /*
+            command pool - manage the memory that is used to store the buffers, buffers are allocated to pool
+        */
 
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -997,7 +1008,11 @@ private:
 
             // VK_PIPELINE_BIND_POINT_GRAPHICS - specify if graphics or compute pipeline
             vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
-            vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+            VkBuffer vertexBuffers[] = {vertexBuffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+            vkCmdDraw(commandBuffers[i], (uint32_t)vertices.size(), 1, 0, 0);
             
             vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1079,7 +1094,6 @@ private:
             throw std::runtime_error("failed to submit draw command buffer!");
         }
 
-
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -1103,6 +1117,59 @@ private:
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     };
+
+    void createVertexBuffer(){
+        // https://stackoverflow.com/questions/36436493/could-someone-help-me-understand-vkphysicaldevicememoryproperties
+
+        // create buffer for vertices
+        VkBufferCreateInfo bufferInfo = {};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // for queues
+        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+
+        if (vkCreateBuffer(this->device, &bufferInfo, nullptr, &this->vertexBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create vertex buffer!");
+        }
+
+        // get memory requirements for buffer
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(this->device, this->vertexBuffer, &memRequirements);
+
+        // allocate memory to vertex buffer to correct type of RAM 
+        VkMemoryAllocateInfo allocInfo = {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &this->vertexBufferMemory) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate vertex buffer memory!");
+        }
+
+        // bind device memory to a buffer object
+        vkBindBufferMemory(this->device, this->vertexBuffer, this->vertexBufferMemory, 0);
+
+        // fill memory
+        void* data; // memory location to where to copy
+        vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+        vkUnmapMemory(device, vertexBufferMemory);
+    }
+
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        // select memory that is visible to HOST
+        // ensure that mapped memory always matches the contents of the allocated memory
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(this->physicalDevice, &memProperties);
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+            if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+
+        throw std::runtime_error("failed to find suitable memory type!");
+    }
 
 };
 

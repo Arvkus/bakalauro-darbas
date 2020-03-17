@@ -5,7 +5,6 @@ const bool isDebug = true;
 
 int main() {
 
-
     Application app;
     
     try {
