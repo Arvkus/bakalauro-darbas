@@ -87,13 +87,10 @@ A render pass represents a collection of attachments, subpasses, and dependencie
 renderpass attachments are bound wy wrapping them into `frameBuffer`. buffer references all `imageViews`
 
 ### Depth buffer
-Create the depth buffer image object
-
-Allocate the depth buffer device memory
-
-Bind the memory to the image object  
-Create the depth buffer image view
-
+Create the depth buffer image object\
+Allocate the depth buffer device memory\
+Bind the memory to the image object\
+Create the depth buffer image view\
 
 this | is | table
 --- | --- | ---
