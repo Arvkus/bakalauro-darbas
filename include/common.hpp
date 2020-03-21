@@ -5,9 +5,12 @@
 // #include <vulkan/vulkan.h> // glfw includes vulkan
 
 #define GLM_FORCE_RADIANS
+//#define GLM_FORCE_LEFT_HANDED
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -26,5 +29,6 @@
 #include <string>  
 #include <chrono>
 #include <array>
+#include <thread>
 
 #include "utilities.hpp"

@@ -1,3 +1,51 @@
+# Vulkan cheatsheet
+
+## Initialization
+## Memory management
+Heap - RAM physical stick\
+`VkMemoryHeap` is an object that describes one Heap that `VkDevice` can talk to\
+`VkMemoryType` describes how to allocate memory\
+`VkDevice` has the size of memory in bytes and `VkMemoryHeapFlagBits` memory flags:
+* non-local (host memory) - RAM shared between CPU and GPU.
+* local (device memory) - VRAM inside GPU
+
+Non-local has 2 memory types, both of them has `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` flag, it allows mapping and allows to choose whether to make cached CPU access with `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` or `VK_MEMORY_PROPERTY_HOST_CACHED_BIT` flags.
+
+Memory heap properties: [https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryPropertyFlagBits.html](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryPropertyFlagBits.html)
+
+
+type - set of memory properties of heap
+device memory is organised into heaps
+heaps have diifferent types of memory `VkGetPhysicalDeviceMemoryProperties`
+
+local memory - render target / textures
+
+
+image layout - affects how pixels are organised, different layout are optimal for different tasks:
+* `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR`: Optimal for presentation
+* `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`: Optimal as attachment for writing colors from the fragment shader
+* `VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL`: Optimal as source in a transfer operation, like vkCmdCopyImageToBuffer
+* `VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL`: Optimal as destination in a transfer operation, like vkCmdCopyBufferToImage
+* `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`: Optimal for sampling from a shader
+
+### Memory pools
+Efficient memory allocation\
+Avoids fragmentation\
+Single threaded
+
+## Render pipeline
+* Shader stages
+* Vertex input
+* Input assembly
+* Viewport state (viewport + scissor)
+* Rasterization state
+* Color blend state
+* Multisampling
+* Dynamic state
+* Pipeline layout (descriptor layout)
+
+___
+
 1. Create vulkan instance, 
     Select API extensions
     Select hardware (physical device)
@@ -57,7 +105,9 @@ for /r %%i in (*.frag, *.vert) do %VULKAN_SDK%/Bin/glslangValidator.exe -V %%i
     * find queue families
 `vkDevice` - create logical device
 
-
+  R
+G   Y
+  B
 
 
 ## General
@@ -83,7 +133,7 @@ renderpass attachment - An attachment corresponds to a single Vulkan VkImageView
 More commonly, a color framebuffer and a depth buffer are separate attachments in Vulkan. Therefore the pAttachments member of VkRenderPassCreateInfo points to an array of attachmentCount elements.
 A render pass represents a collection of attachments, subpasses, and dependencies between the subpasses, and describes how the attachments are used over the course of the subpasses. The use of a render pass in a command buffer is a render pass instance.
 
-
+!!!! render pass defines what types of attachments framebuffer will use, and how each subpass will use
 renderpass attachments are bound wy wrapping them into `frameBuffer`. buffer references all `imageViews`
 
 ### Depth buffer
