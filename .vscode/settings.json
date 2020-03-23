@@ -65,7 +65,8 @@
         "fstream": "cpp",
         "bitset": "cpp",
         "chrono": "cpp",
-        "ratio": "cpp"
+        "ratio": "cpp",
+        "thread": "cpp"
     },
     "terminal.integrated.shell.windows": "cmd.exe"
 }
