@@ -66,7 +66,10 @@
         "bitset": "cpp",
         "chrono": "cpp",
         "ratio": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "atomic": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp"
     },
     "terminal.integrated.shell.windows": "cmd.exe"
 }

@@ -1,7 +1,10 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
 // #include <vulkan/vulkan.h> // glfw includes vulkan
 
 #define GLM_FORCE_RADIANS
@@ -30,5 +33,24 @@
 #include <chrono>
 #include <array>
 #include <thread>
+
+//-----------------------------------------
+// Globals
+
+const bool APP_DEBUG = true;
+const char* TITLE = "Vulkan window";
+const int MAX_FRAMES_IN_FLIGHT = 2;
+bool APP_RUNNING = true;
+
+const std::vector<const char*> VALIDATION_LAYERS = {
+    "VK_LAYER_KHRONOS_validation",
+};
+
+const std::vector<const char*> DEVICE_EXTENSIONS = {
+    "VK_KHR_swapchain",
+};
+
+//-----------------------------------------
+// Utility functions/structs/enums
 
 #include "utilities.hpp"

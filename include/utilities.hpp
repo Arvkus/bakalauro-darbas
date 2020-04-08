@@ -1,7 +1,8 @@
 #include "common.hpp"
 
+//-------------------------------------------------------------------
 /// `VK_MAKE_VERSION()` number `i32` converts to `x.x.x` string
-std::string apiVersionToString(uint32_t version)
+std::string version_to_string(uint32_t version)
 {
 	uint16_t patch = std::bitset<12>(version).to_ulong();
 	uint8_t minor = version >> 12;
@@ -10,7 +11,9 @@ std::string apiVersionToString(uint32_t version)
 	return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch);
 }
 
-std::vector<char> readFile(const std::string &filename)
+//-------------------------------------------------------------------
+/// read file and return vector buffer data (bytes)
+std::vector<char> read_file(const std::string &filename)
 {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -32,18 +35,28 @@ std::vector<char> readFile(const std::string &filename)
 	return buffer;
 }
 
-uint64_t timeSinceEpochMilli()
+//-------------------------------------------------------------------
+
+uint64_t timestamp_milli()
 {
 	using namespace std::chrono;
 	return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
-uint64_t timeSinceEpochMicro()
+uint64_t timestamp_micro()
 {
 	using namespace std::chrono;
 	return duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
 }
 
+uint64_t timestamp_nano()
+{
+	using namespace std::chrono;
+	return duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+//-------------------------------------------------------------------
+/// Position, normal, texture
 struct Vertex
 {
 	Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture){
@@ -56,7 +69,8 @@ struct Vertex
 	glm::vec3 normal;
 	glm::vec2 texture;
 
-	static VkVertexInputBindingDescription getBindingDescription() {
+	/// buffer binding indices, tells `attribute locations` what buffer to use
+	static VkVertexInputBindingDescription get_binding_description() {
 		VkVertexInputBindingDescription description = {};
 		description.binding = 0;
 		description.stride = sizeof(Vertex);
@@ -64,30 +78,73 @@ struct Vertex
 		return description;
 	};
 
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() { // vertex shader layout attributes
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+	/// location attributes for vertex shader
+	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions() { // vertex shader layout attributes
+		std::array<VkVertexInputAttributeDescription, 3> descriptions = {};
 
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, position);
+		descriptions[0].binding = 0;
+		descriptions[0].location = 0;
+		descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		descriptions[0].offset = offsetof(Vertex, position);
 
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, normal);
+		descriptions[1].binding = 0;
+		descriptions[1].location = 1;
+		descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		descriptions[1].offset = offsetof(Vertex, normal);
 
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texture);
+		descriptions[2].binding = 0;
+		descriptions[2].location = 2;
+		descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		descriptions[2].offset = offsetof(Vertex, texture);
 
-		return attributeDescriptions;
+		return descriptions;
 	};
 };
+
+//-------------------------------------------------------------------
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
 };
+
+//-------------------------------------------------------------------
+/// Console color indices
+enum ConsoleColor{
+    Blue=1,
+    Green=2,
+    Red=4,
+    White=7,
+    Grey=8,
+};
+
+//-------------------------------------------------------------------
+        
+bool is_validation_layers_supported()
+{
+	uint32_t layer_count;
+	vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
+
+	std::vector<VkLayerProperties> available_layers(layer_count);
+	vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
+
+	for(const char* required_layer_name : VALIDATION_LAYERS){
+		bool layer_found = false;
+
+		for(const VkLayerProperties& layer_info : available_layers){
+			if(std::strcmp(layer_info.layerName, required_layer_name) == 0){
+				layer_found = true;
+			}
+		}
+
+		if(!layer_found){
+			printf("%s - validation layer is not supported \n", required_layer_name);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+//-------------------------------------------------------------------
