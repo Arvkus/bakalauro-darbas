@@ -126,15 +126,15 @@ public:
         Buffer stage;
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        // move image data to RAM
+        stage.fill_memory(source, size); // move image to prepared buffer (RAM)
+        /*
         void* data; // memory location to where to copy
         vkMapMemory(instance->device, stage.memory, 0, size, 0, &data);
         memcpy(data, source, (size_t)size); // destination, source, size
         vkUnmapMemory(instance->device, stage.memory);
-
+        */
         transition_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copy_buffer_to_image(stage.buffer, this->image, width, height);
+        copy_buffer_to_image(stage.buffer, this->image, width, height); // move image to VRAM
         transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 

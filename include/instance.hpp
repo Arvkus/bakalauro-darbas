@@ -354,7 +354,8 @@ private:
         */
 
         for (const auto& available_mode : present_modes) {
-            if (available_mode == VK_PRESENT_MODE_MAILBOX_KHR || available_mode == VK_PRESENT_MODE_FIFO_KHR ) {
+            //  || available_mode == VK_PRESENT_MODE_FIFO_KHR 
+            if (available_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
                 this->surface.present_mode = available_mode;
                 is_mode_ok = true;
                 break;

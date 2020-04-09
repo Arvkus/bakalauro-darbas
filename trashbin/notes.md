@@ -1,19 +1,8 @@
-```cpp
+descriptors
+(pipeline, memory, instance)
 
-Memory::init(&device, &command_pool);
+    uniform_struct
+    uniform_buffer
 
-Image image = Memory::create_image();
-Buffer buffer = Memory::create_buffer();
-//image.transition_layout();
-image.fill_memory(&pixels, layout);
-//image.transition_layout();
-image.create_view();
-
-
-
-draw - 
-    swapchain, 
-    instance, 
-    command buffers
-    uniform buffers
-    
+    descriptor_pool
+    descriptor_sets

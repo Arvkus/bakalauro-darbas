@@ -43,6 +43,7 @@ void render_thread_function()
 
 int main()
 {
+
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // disable OpenGL
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);     // hide window while Vulkan initialises

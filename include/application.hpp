@@ -2,6 +2,8 @@
 #include "instance.hpp"
 #include "memory.hpp"
 #include "pipeline.hpp"
+#include "swapchain.hpp"
+#include "descriptor.hpp"
 #include "model.hpp"
 
 /*
@@ -29,89 +31,22 @@ descriptor pool -> descriptor set -> (bind sets to command buffer)
 */
 class Application{
 public:
-    uint32_t current_frame = 0;
-
-    //void draw(){}
+    
     void draw(){
-        // wait for fence signal (1), first frame is already signaled (behaves like debounce)
-        
-        vkWaitForFences(instance.device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
-        vkResetFences(instance.device, 1, &in_flight_fences[current_frame]); // remove signal (0)
-
-        uint32_t image_index;
-        VkResult result;
-
-        result = vkAcquireNextImageKHR(
-            instance.device, 
-            swapchain, 
-            UINT64_MAX, // timeout
-            image_available_semaphores[current_frame], // signal semaphore
-            VK_NULL_HANDLE,
-            &image_index
-        );
-
-        if(result == VK_ERROR_OUT_OF_DATE_KHR){
-            printf("Swapchain changed state \n");
-            //this->recreate_swapchain();
-            return;
-        } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-            throw std::runtime_error("failed to acquire swap chain image!");
-        }
-
-        update_uniform_buffer(image_index);
-
-        // submit command buffer to queue
-        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        VkSemaphore waitSemaphores[] = {image_available_semaphores[current_frame]};
-        VkSemaphore signalSemaphores[] = {render_finished_semaphores[current_frame]};
-
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &command_buffers[image_index];
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
-
-        if (vkQueueSubmit(instance.queues.graphics_queue, 1, &submitInfo, in_flight_fences[current_frame]) != VK_SUCCESS) { 
-            throw std::runtime_error("failed to submit draw command buffer!");
-        }
-
-        // present image
-        VkSwapchainKHR swapchains[] = {swapchain};
-        VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapchains;
-        presentInfo.pImageIndices = &image_index;
-
-        result = vkQueuePresentKHR(instance.queues.present_queue, &presentInfo);
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-            //this->recreate_swapchain();
-        } else if (result != VK_SUCCESS) {
-            throw std::runtime_error("failed to present swap chain image!");
-        }
-
-        current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-        //printf("Render loop %f \n", glfwGetTime());
+        uint32_t next_image = swapchain.accquire_next_image();
+        update_uniform_buffer(next_image);
+        swapchain.present_image(next_image);
     }
-
 
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
         this->pipeline.init(&this->instance);
+        this->swapchain.init(&this->instance, &this->pipeline);
+      //this->descriptors.init(&this->instance, &this->pipeline);
         
         prepare_model_buffers();
-        
-        create_depth_resources();
-        create_swapchain();
-        create_swapchain_image_views();
-        create_swapchain_framebuffers();
-        
+
         create_texture_sampler();
         create_texture();
 
@@ -121,23 +56,13 @@ public:
 
         create_command_pool();
         create_command_buffers();
-        
-        create_sync_objects();
+
+        this->swapchain.add_command_buffers(command_buffers.data());
     }
 
     void destroy()
     {
         vkDeviceWaitIdle(instance.device);
-
-        vkDestroyImageView(instance.device, depth_image.image_view, nullptr);
-        vkDestroyImage(instance.device, depth_image.image, nullptr);
-        vkFreeMemory(instance.device, depth_image.memory, nullptr);
-
-        //for(const VkImageView& image_view : swapchain_image_views) vkDestroyImageView(instance.device, image_view, nullptr);
-        for(const VkFramebuffer& framebuffer : swapchain_framebuffers) vkDestroyFramebuffer(instance.device, framebuffer, nullptr);
-        vkDestroySwapchainKHR(instance.device, swapchain, nullptr); // swapchain auto-deletes images
-
-        vkDestroyCommandPool(instance.device, command_pool, nullptr);
         this->pipeline.destroy();
         this->instance.destroy();
     }
@@ -145,16 +70,11 @@ public:
 private:
     Instance instance;
     Pipeline pipeline; 
+    Swapchain swapchain;
 
     Model model = Model();
     Buffer model_vertices;
     Buffer model_indices;
-
-    Image depth_image;
-    VkSwapchainKHR swapchain;
-    std::vector<VkImage> swapchain_images;
-    std::vector<VkImageView> swapchain_image_views;
-    std::vector<VkFramebuffer> swapchain_framebuffers;
 
     VkCommandPool command_pool;
     std::vector<VkCommandBuffer> command_buffers;
@@ -165,108 +85,6 @@ private:
 
     VkSampler texture_sampler;
     Image texture_image;
-
-    // semaphore for each frame
-    std::vector<VkSemaphore> image_available_semaphores;
-    std::vector<VkSemaphore> render_finished_semaphores;
-    std::vector<VkFence> in_flight_fences;
-
-    //---------------------------------------------------------------------------------
-    // command recording
-
-    //---------------------------------------------------------------------------------
-    // depth resources
-
-    void create_depth_resources()
-    {
-        // {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT} - available depth formats
-        VkFormat format = instance.surface.depth_format; // VK_FORMAT_D32_SFLOAT; // findDepthFormat();
-        uint32_t width = instance.surface.capabilities.currentExtent.width;
-        uint32_t height = instance.surface.capabilities.currentExtent.height;
-
-        depth_image.init(&this->instance);
-        depth_image.create_image(width, height, format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-        depth_image.create_image_view(format, VK_IMAGE_ASPECT_DEPTH_BIT);
-    }
-
-
-    //---------------------------------------------------------------------------------
-    void create_swapchain()
-    {
-        VkSwapchainCreateInfoKHR ci = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
-        ci.surface = this->instance.surface.vulcan_surface;
-        ci.minImageCount = this->instance.surface.image_count;
-        ci.imageFormat = this->instance.surface.surface_format.format;
-        ci.imageColorSpace = this->instance.surface.surface_format.colorSpace;
-        ci.imageExtent = this->instance.surface.capabilities.currentExtent;
-        ci.presentMode = this->instance.surface.present_mode;
-        ci.imageArrayLayers = 1; // always 1 layer, 2 layers are for stereoscopic 3D application
-        ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // specifies that the image can be used to create a VkImageView, use as a color
-        ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; 
-        ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // alpha channel use with other windows
-        ci.clipped = VK_TRUE; // if pixels are obscured, clip them
-        ci.oldSwapchain = VK_NULL_HANDLE; // VK_NULL_HANDLE or swapchain; // if window resizes, need to recreate swapchain
-        ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE; // image going to be used by 1 queue
-        ci.queueFamilyIndexCount = 0; // Optional
-        ci.pQueueFamilyIndices = nullptr; // Optional
-
-        // swap chain also auto-creates images
-        if(vkCreateSwapchainKHR(instance.device, &ci, nullptr, &this->swapchain) == VK_SUCCESS) {
-            printf("Created swapchain \n");
-        }else{
-            throw std::runtime_error("failed to create swap chain!");
-        }
-
-        uint32_t image_count;
-        vkGetSwapchainImagesKHR(instance.device, this->swapchain, &image_count, nullptr);
-        swapchain_images.resize(image_count);
-        vkGetSwapchainImagesKHR(instance.device, this->swapchain, &image_count, swapchain_images.data());  
-    }
-
-    void create_swapchain_image_views()
-    {
-        this->swapchain_image_views.resize(this->swapchain_images.size());
-        for(int i = 0; i < this->swapchain_images.size(); i++)
-        {
-            VkImageViewCreateInfo ci = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-            ci.image = swapchain_images[i];
-            ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            ci.format = instance.surface.surface_format.format;
-            ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            ci.subresourceRange.baseMipLevel = 0;
-            ci.subresourceRange.levelCount = 1;
-            ci.subresourceRange.baseArrayLayer = 0;
-            ci.subresourceRange.layerCount = 1;
-
-            if (vkCreateImageView(instance.device, &ci, nullptr, &swapchain_image_views[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create texture image view!");
-            }
-        }
-    }
-
-    void create_swapchain_framebuffers() // Renderpass use framebuffers
-    {
-        this->swapchain_framebuffers.resize(this->swapchain_images.size());
-
-        for (size_t i = 0; i < this->swapchain_images.size(); i++) 
-        {
-            std::array<VkImageView, 2> attachments = { this->swapchain_image_views[i], this->depth_image.image_view };
-
-            VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-            framebufferInfo.renderPass = this->pipeline.render_pass;
-            framebufferInfo.attachmentCount = (uint32_t)attachments.size();
-            framebufferInfo.pAttachments = attachments.data();
-            framebufferInfo.width = this->instance.surface.capabilities.currentExtent.width;
-            framebufferInfo.height = this->instance.surface.capabilities.currentExtent.height;
-            framebufferInfo.layers = 1;
-
-            if (vkCreateFramebuffer(instance.device, &framebufferInfo, nullptr, &swapchain_framebuffers[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create framebuffer!");
-            }
-        }
-
-        printf("Created framebuffers \n");
-    }
 
     //---------------------------------------------------------------------------------
 
@@ -290,7 +108,7 @@ private:
 
     void create_command_buffers()
     {
-        command_buffers.resize(swapchain_images.size());
+        command_buffers.resize(instance.surface.image_count);
 
         VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         alloc_info.commandPool = this->command_pool;
@@ -310,7 +128,7 @@ private:
             // render pass info for recodring
             VkRenderPassBeginInfo render_pass_bi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
             render_pass_bi.renderPass = this->pipeline.render_pass;
-            render_pass_bi.framebuffer = this->swapchain_framebuffers[i]; // framebuffer for each swap chain image that specifies it as color attachment.
+            render_pass_bi.framebuffer = this->swapchain.swapchain_framebuffers[i]; // framebuffer for each swap chain image that specifies it as color attachment.
             render_pass_bi.renderArea.offset = {0, 0}; // render area
             render_pass_bi.renderArea.extent = this->instance.surface.capabilities.currentExtent;
             render_pass_bi.clearValueCount = (uint32_t)clear_values.size();
@@ -369,9 +187,9 @@ private:
     void create_uniform_buffers(){
 
         VkDeviceSize size = sizeof(UniformBufferObject);
-        uniform_buffers.resize(swapchain_images.size());
+        uniform_buffers.resize(instance.surface.image_count);
 
-        for (size_t i = 0; i < swapchain_images.size(); i++) 
+        for (size_t i = 0; i < instance.surface.image_count; i++) 
         {
             uniform_buffers[i].init(&this->instance);
             uniform_buffers[i].create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -398,7 +216,7 @@ private:
         float y = glm::cos( glm::radians(angle) ) * distance;
 
         ubo.view = glm::lookAt(glm::vec3(x,y,2), glm::vec3(0,0,0), glm::vec3(0,0,1));
-        ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
+        ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.75));
 
         uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
     }
@@ -407,14 +225,14 @@ private:
     void create_descriptor_pool(){
         std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        pool_sizes[0].descriptorCount = (uint32_t)swapchain_images.size();
+        pool_sizes[0].descriptorCount = (uint32_t)instance.surface.image_count;
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        pool_sizes[1].descriptorCount = (uint32_t)swapchain_images.size();
+        pool_sizes[1].descriptorCount = (uint32_t)instance.surface.image_count;
 
         VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         poolInfo.poolSizeCount = (uint32_t)pool_sizes.size();
         poolInfo.pPoolSizes = pool_sizes.data();
-        poolInfo.maxSets = (uint32_t)swapchain_images.size();
+        poolInfo.maxSets = (uint32_t)instance.surface.image_count;
 
         if (vkCreateDescriptorPool(instance.device, &poolInfo, nullptr, &this->descriptor_pool) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor pool!");
@@ -424,34 +242,32 @@ private:
     }
 
     void create_descriptor_sets(){
-        std::vector<VkDescriptorSetLayout> layouts(swapchain_images.size(), this->pipeline.descriptor_set_layout);
+        std::vector<VkDescriptorSetLayout> layouts(instance.surface.image_count, this->pipeline.descriptor_set_layout);
 
         VkDescriptorSetAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
         allocInfo.descriptorPool = this->descriptor_pool;
-        allocInfo.descriptorSetCount = (uint32_t)swapchain_images.size();
+        allocInfo.descriptorSetCount = (uint32_t)instance.surface.image_count;
         allocInfo.pSetLayouts = layouts.data();
 
-        descriptor_sets.resize(swapchain_images.size());
+        descriptor_sets.resize(instance.surface.image_count);
         if (vkAllocateDescriptorSets(instance.device, &allocInfo, descriptor_sets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate descriptor sets!");
         }
 
         printf("Allocated descriptor sets \n");
 
-        for (size_t i = 0; i < swapchain_images.size(); i++) {
+        for (size_t i = 0; i < instance.surface.image_count; i++) {
 
             VkDescriptorBufferInfo bufferInfo = {};
             bufferInfo.buffer = uniform_buffers[i].buffer;
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UniformBufferObject);
-
             
             VkDescriptorImageInfo imageInfo = {};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = texture_image.image_view;
             imageInfo.sampler = texture_sampler;
             
-
             std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -471,9 +287,7 @@ private:
             descriptorWrites[1].pImageInfo = &imageInfo;
             
             vkUpdateDescriptorSets(instance.device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
-
         }
-
         printf("Descriptor sets ready \n");
     }
 
@@ -487,7 +301,7 @@ private:
 
         this->texture_image.init(&this->instance);
         this->texture_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        //memory.fill_memory_image(this->texture_image, pixels, memorySize);
+        this->texture_image.fill_memory(width, height, pixels);
         this->texture_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         stbi_image_free(pixels);
 
@@ -524,31 +338,4 @@ private:
 
         printf("created sampler \n");
     }
-
-    void create_sync_objects()
-    {
-        // semaphores are designed to be used to sync queues, GPU-GPU
-        // fences are designed to sync vulkan, GPU-CPU
-        image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        in_flight_fences.resize(MAX_FRAMES_IN_FLIGHT);
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            VkSemaphoreCreateInfo semaphoreInfo = {};
-            semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-            VkFenceCreateInfo fenceInfo = {};
-            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-            if (vkCreateSemaphore(instance.device, &semaphoreInfo, nullptr, &image_available_semaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(instance.device, &semaphoreInfo, nullptr, &render_finished_semaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(instance.device, &fenceInfo, nullptr, &in_flight_fences[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create semaphores!");
-            }
-        }
-
-        printf("Created sync objects \n");
-    }
-
 };
