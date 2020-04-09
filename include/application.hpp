@@ -332,6 +332,8 @@ private:
         {
             throw std::runtime_error("failed to create command pool!");
         };
+
+        //test 
     }
 
     void create_command_buffers()
