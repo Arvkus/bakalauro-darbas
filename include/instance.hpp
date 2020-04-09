@@ -32,6 +32,7 @@ public:
     VkInstance vulkan_instance;
     VkDevice device;
     VkPhysicalDevice physical_device;
+    VkCommandPool transfer_command_pool;
     
     Queues queues = {};
     Surface surface = {};
@@ -44,6 +45,7 @@ public:
         pick_physical_device();
         pick_device_queues();
         create_device();
+        create_transfer_command_pool();
     }
 
     void destroy()
@@ -58,8 +60,36 @@ public:
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->physical_device, this->surface.vulcan_surface, &this->surface.capabilities);
     }
 
-    // create memory buffer
-    // create image buffer
+    VkCommandBuffer begin_single_use_command() {
+        VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO }; 
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = transfer_command_pool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        return commandBuffer;
+    }
+
+    void end_single_use_command(VkCommandBuffer commandBuffer) {
+        vkEndCommandBuffer(commandBuffer);
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        vkQueueSubmit(queues.transfer_queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(queues.transfer_queue);
+
+        vkFreeCommandBuffers(device, transfer_command_pool, 1, &commandBuffer);
+    }
+
 private:
 
     //------------------------------------------------------------------------------------------------------------------------------
@@ -114,7 +144,7 @@ private:
 
         // pick first device
         if(!is_device_compatible(physical_devices[0])) throw std::runtime_error("selected device is not compatible");
-        if(!is_device_surface_capable(physical_devices[0])) throw std::runtime_error("selected device's surface is not capable");
+        if(!is_device_surface_capable(physical_devices[0])) throw std::runtime_error("surface is not capable for rendering");
         this->physical_device = physical_devices[0]; 
     }
 
@@ -344,7 +374,7 @@ private:
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
         );
-        std::cout<< is_format_ok << " " << is_mode_ok << " " << is_image_count_ok << std::endl;
+        
         return is_format_ok && is_mode_ok && is_image_count_ok;
     }
 
@@ -364,5 +394,21 @@ private:
     }
 
     //------------------------------------------------------------------------------------------------------------------------------
+
+    void create_transfer_command_pool()
+    {
+        VkCommandPoolCreateInfo ci = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+        ci.flags = 0;
+        ci.queueFamilyIndex = queues.transfer_family_index;
+
+        if(vkCreateCommandPool(device, &ci, nullptr, &transfer_command_pool) == VK_SUCCESS)
+        {
+            printf("Created transfer command pool \n");
+        }   
+        else
+        {
+            throw std::runtime_error("failed to create command pool!");
+        };
+    }
 
 };

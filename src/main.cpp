@@ -39,6 +39,8 @@ void render_thread_function()
     }
 }
 
+
+
 int main()
 {
     glfwInit();

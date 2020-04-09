@@ -2,7 +2,6 @@
 #include "instance.hpp"
 #include "memory.hpp"
 #include "pipeline.hpp"
-#include "commands.hpp"
 #include "model.hpp"
 
 /*
@@ -32,6 +31,7 @@ class Application{
 public:
     uint32_t current_frame = 0;
 
+    //void draw(){}
     void draw(){
         // wait for fence signal (1), first frame is already signaled (behaves like debounce)
         
@@ -103,18 +103,14 @@ public:
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
-        this->memory_manager.init(&this->instance);
-        this->commands_manager.init(&this->instance);
         this->pipeline.init(&this->instance);
-
+        
         prepare_model_buffers();
         
         create_depth_resources();
         create_swapchain();
         create_swapchain_image_views();
         create_swapchain_framebuffers();
-
-        create_command_pool();
         
         create_texture_sampler();
         create_texture();
@@ -123,8 +119,9 @@ public:
         create_descriptor_pool();
         create_descriptor_sets();
 
+        create_command_pool();
         create_command_buffers();
-    
+        
         create_sync_objects();
     }
 
@@ -132,11 +129,11 @@ public:
     {
         vkDeviceWaitIdle(instance.device);
 
-        vkDestroyImageView(instance.device, depth_image_view, nullptr);
+        vkDestroyImageView(instance.device, depth_image.image_view, nullptr);
         vkDestroyImage(instance.device, depth_image.image, nullptr);
         vkFreeMemory(instance.device, depth_image.memory, nullptr);
 
-        for(const VkImageView& image_view : swapchain_image_views) vkDestroyImageView(instance.device, image_view, nullptr);
+        //for(const VkImageView& image_view : swapchain_image_views) vkDestroyImageView(instance.device, image_view, nullptr);
         for(const VkFramebuffer& framebuffer : swapchain_framebuffers) vkDestroyFramebuffer(instance.device, framebuffer, nullptr);
         vkDestroySwapchainKHR(instance.device, swapchain, nullptr); // swapchain auto-deletes images
 
@@ -147,16 +144,13 @@ public:
 
 private:
     Instance instance;
-    MemoryManager memory_manager;
-    CommandsManager commands_manager;
     Pipeline pipeline; 
 
     Model model = Model();
-    MemoryBuffer model_vertices;
-    MemoryBuffer model_indices;
+    Buffer model_vertices;
+    Buffer model_indices;
 
-    MemoryImage depth_image;
-    VkImageView depth_image_view;
+    Image depth_image;
     VkSwapchainKHR swapchain;
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
@@ -165,13 +159,12 @@ private:
     VkCommandPool command_pool;
     std::vector<VkCommandBuffer> command_buffers;
 
-    std::vector<MemoryBuffer> uniform_buffers;
+    std::vector<Buffer> uniform_buffers;
     VkDescriptorPool descriptor_pool;
     std::vector<VkDescriptorSet> descriptor_sets;
 
     VkSampler texture_sampler;
-    MemoryImage texture_image;
-    VkImageView texture_image_view;
+    Image texture_image;
 
     // semaphore for each frame
     std::vector<VkSemaphore> image_available_semaphores;
@@ -179,60 +172,7 @@ private:
     std::vector<VkFence> in_flight_fences;
 
     //---------------------------------------------------------------------------------
-
-    VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
-    {
-        VkImageViewCreateInfo ci = {};
-        ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        ci.image = image;
-        ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ci.format = format;
-        ci.subresourceRange.aspectMask = aspectFlags; // VK_IMAGE_ASPECT_COLOR_BIT; type of data
-        ci.subresourceRange.baseMipLevel = 0;
-        ci.subresourceRange.levelCount = 1;
-        ci.subresourceRange.layerCount = 1;
-        ci.subresourceRange.baseArrayLayer = 0;
-
-        VkImageView image_view;
-        if (vkCreateImageView(instance.device, &ci, nullptr, &image_view) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create texture image view!");
-        }
-
-        return image_view;
-    }
-
-    //---------------------------------------------------------------------------------
     // command recording
-
-    VkCommandBuffer begin_single_use_command() {
-        VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO }; 
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = this->command_pool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(instance.device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        return commandBuffer;
-    }
-
-    void end_single_use_command(VkCommandBuffer commandBuffer) {
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(instance.queues.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(instance.queues.graphics_queue);
-
-        vkFreeCommandBuffers(instance.device, command_pool, 1, &commandBuffer);
-    }
 
     //---------------------------------------------------------------------------------
     // depth resources
@@ -241,16 +181,16 @@ private:
     {
         // {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT} - available depth formats
         VkFormat format = instance.surface.depth_format; // VK_FORMAT_D32_SFLOAT; // findDepthFormat();
-
         uint32_t width = instance.surface.capabilities.currentExtent.width;
         uint32_t height = instance.surface.capabilities.currentExtent.height;
-        depth_image = memory_manager.create_image(width, height, format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-        depth_image_view = create_image_view(depth_image.image, format, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+        depth_image.init(&this->instance);
+        depth_image.create_image(width, height, format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        depth_image.create_image_view(format, VK_IMAGE_ASPECT_DEPTH_BIT);
     }
 
 
     //---------------------------------------------------------------------------------
-
     void create_swapchain()
     {
         VkSwapchainCreateInfoKHR ci = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
@@ -286,19 +226,31 @@ private:
     void create_swapchain_image_views()
     {
         this->swapchain_image_views.resize(this->swapchain_images.size());
-        for(int i = 0; i < this->swapchain_images.size(); i++){
-            // alternative format location - 
-            this->swapchain_image_views[i] = create_image_view(this->swapchain_images[i], instance.surface.surface_format.format, VK_IMAGE_ASPECT_COLOR_BIT);
+        for(int i = 0; i < this->swapchain_images.size(); i++)
+        {
+            VkImageViewCreateInfo ci = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+            ci.image = swapchain_images[i];
+            ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            ci.format = instance.surface.surface_format.format;
+            ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            ci.subresourceRange.baseMipLevel = 0;
+            ci.subresourceRange.levelCount = 1;
+            ci.subresourceRange.baseArrayLayer = 0;
+            ci.subresourceRange.layerCount = 1;
+
+            if (vkCreateImageView(instance.device, &ci, nullptr, &swapchain_image_views[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create texture image view!");
+            }
         }
     }
 
     void create_swapchain_framebuffers() // Renderpass use framebuffers
     {
-        this->swapchain_framebuffers.resize(this->swapchain_image_views.size());
+        this->swapchain_framebuffers.resize(this->swapchain_images.size());
 
-        for (size_t i = 0; i < this->swapchain_image_views.size(); i++) 
+        for (size_t i = 0; i < this->swapchain_images.size(); i++) 
         {
-            std::array<VkImageView, 2> attachments = { this->swapchain_image_views[i], this->depth_image_view };
+            std::array<VkImageView, 2> attachments = { this->swapchain_image_views[i], this->depth_image.image_view };
 
             VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
             framebufferInfo.renderPass = this->pipeline.render_pass;
@@ -402,12 +354,14 @@ private:
         VkDeviceSize size;
 
         size = sizeof(Vertex) * model.vertices.size();
-        model_vertices = memory_manager.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        memory_manager.fill_memory_buffer(model_vertices, model.vertices.data(), size);
+        model_vertices.init(&this->instance);
+        model_vertices.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        model_vertices.fill_memory(model.vertices.data(), size);
 
         size = sizeof(uint16_t) * model.indices.size();
-        model_indices = memory_manager.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        memory_manager.fill_memory_buffer(model_indices, model.indices.data(), size);
+        model_indices.init(&this->instance);
+        model_indices.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        model_indices.fill_memory(model.indices.data(), size);
 
         printf("Vertex and index buffers created \n");
     }
@@ -419,14 +373,15 @@ private:
 
         for (size_t i = 0; i < swapchain_images.size(); i++) 
         {
-            uniform_buffers[i] = memory_manager.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            uniform_buffers[i].init(&this->instance);
+            uniform_buffers[i].create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         }
 
         printf("created uniform buffers \n");
     }
 
     
-    void update_uniform_buffer(uint32_t currentImage)
+    void update_uniform_buffer(uint32_t current_image)
     {
         float width = instance.surface.capabilities.currentExtent.width;
         float height = instance.surface.capabilities.currentExtent.height;
@@ -445,10 +400,7 @@ private:
         ubo.view = glm::lookAt(glm::vec3(x,y,2), glm::vec3(0,0,0), glm::vec3(0,0,1));
         ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
-        void* data;
-        vkMapMemory(instance.device, uniform_buffers[currentImage].memory, 0, sizeof(ubo), 0, &data);
-        memcpy(data, &ubo, sizeof(ubo));
-        vkUnmapMemory(instance.device, uniform_buffers[currentImage].memory);
+        uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
     }
     
 
@@ -496,7 +448,7 @@ private:
             
             VkDescriptorImageInfo imageInfo = {};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = texture_image_view;
+            imageInfo.imageView = texture_image.image_view;
             imageInfo.sampler = texture_sampler;
             
 
@@ -533,14 +485,10 @@ private:
         if(!pixels) throw std::runtime_error("failed to load texture image!");
         VkDeviceSize memorySize = width * height *4;
 
-        this->texture_image = memory_manager.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-        //memory_manager.fill_memory_image(this->texture_image, pixels, memorySize);
-
-        transitionImageLayout(texture_image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        transitionImageLayout(texture_image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        this->texture_image_view = create_image_view(texture_image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        this->texture_image.init(&this->instance);
+        this->texture_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        //memory.fill_memory_image(this->texture_image, pixels, memorySize);
+        this->texture_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         stbi_image_free(pixels);
 
         printf("created texture \n");
@@ -603,67 +551,4 @@ private:
         printf("Created sync objects \n");
     }
 
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
-
-        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        barrier.image = image;
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-
-        barrier.srcAccessMask = 0; // TODO
-        barrier.dstAccessMask = 0; // TODO
-
-        //-------------------------------------------------------------
-
-        VkPipelineStageFlags sourceStage;
-        VkPipelineStageFlags destinationStage;
-
-        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        /*
-        } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL){
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        */
-        } else {
-            throw std::invalid_argument("unsupported layout transition!");
-        }
-
-        //-------------------------------------------------------------
-
-        VkCommandBuffer commandBuffer = begin_single_use_command();
-
-        vkCmdPipelineBarrier(
-            commandBuffer,
-            sourceStage, destinationStage,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-
-        end_single_use_command(commandBuffer);
-    }
 };
