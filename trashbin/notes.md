@@ -8,3 +8,12 @@ Buffer buffer = Memory::create_buffer();
 image.fill_memory(&pixels, layout);
 //image.transition_layout();
 image.create_view();
+
+
+
+draw - 
+    swapchain, 
+    instance, 
+    command buffers
+    uniform buffers
+    
