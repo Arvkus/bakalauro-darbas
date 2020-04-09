@@ -6,29 +6,6 @@
 #include "descriptors.hpp"
 #include "model.hpp"
 
-/*
-instance class:
-    instance / validation layers
-    physical device / query capabilities
-    device
-    queues
-    surface
-
-
-command class (&instance)
-memory management class (&instance, &command)
-
-swapchain -> swapchain images -> imageviews -> imagebuffers -> commandbuffers
-
-
-
-
-             descriptor set layout -> pipeline layout -> graphics pipeline
-                        |
-descriptor pool -> descriptor set -> (bind sets to command buffer)
-
-
-*/
 class Application{
 public:
     
