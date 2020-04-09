@@ -99,6 +99,7 @@ public:
         //printf("Render loop %f \n", glfwGetTime());
     }
 
+
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
@@ -532,11 +533,12 @@ private:
 
         this->texture_image = memory_manager.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
+        //memory_manager.fill_memory_image(this->texture_image, pixels, memorySize);
+
         transitionImageLayout(texture_image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         transitionImageLayout(texture_image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         this->texture_image_view = create_image_view(texture_image.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-        //memory_manager.fill_memory_image(this->texture_image, pixels, memorySize);
         stbi_image_free(pixels);
 
         printf("created texture \n");
