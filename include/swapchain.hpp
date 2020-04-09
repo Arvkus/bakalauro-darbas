@@ -222,7 +222,7 @@ public:
     }
 
 
-    void add_command_buffers(VkCommandBuffer *source){
+    void bind_command_buffers(VkCommandBuffer *source){
         this->command_buffers = source;
     }
 

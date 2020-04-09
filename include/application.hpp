@@ -3,7 +3,7 @@
 #include "memory.hpp"
 #include "pipeline.hpp"
 #include "swapchain.hpp"
-#include "descriptor.hpp"
+#include "descriptors.hpp"
 #include "model.hpp"
 
 /*
@@ -41,23 +41,20 @@ public:
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
-        this->pipeline.init(&this->instance);
+        this->descriptors.init(&this->instance);
+        this->pipeline.init(&this->instance, &this->descriptors);
         this->swapchain.init(&this->instance, &this->pipeline);
-      //this->descriptors.init(&this->instance, &this->pipeline);
         
-        prepare_model_buffers();
+        create_vertex_buffers();
+        create_image_buffers();
 
-        create_texture_sampler();
-        create_texture();
-
-        create_uniform_buffers();
-        create_descriptor_pool();
-        create_descriptor_sets();
+        this->descriptors.bind_diffuse_image(&this->texture_image);
+        this->descriptors.create_descriptor_sets();
 
         create_command_pool();
         create_command_buffers();
 
-        this->swapchain.add_command_buffers(command_buffers.data());
+        this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
 
     void destroy()
@@ -70,6 +67,7 @@ public:
 private:
     Instance instance;
     Pipeline pipeline; 
+    Descriptors descriptors;
     Swapchain swapchain;
 
     Model model = Model();
@@ -79,12 +77,31 @@ private:
     VkCommandPool command_pool;
     std::vector<VkCommandBuffer> command_buffers;
 
-    std::vector<Buffer> uniform_buffers;
-    VkDescriptorPool descriptor_pool;
-    std::vector<VkDescriptorSet> descriptor_sets;
-
-    VkSampler texture_sampler;
     Image texture_image;
+
+    //---------------------------------------------------------------------------------
+
+    void update_uniform_buffer(uint32_t current_image)
+    {
+        float width = instance.surface.capabilities.currentExtent.width;
+        float height = instance.surface.capabilities.currentExtent.height;
+
+        UniformBufferObject ubo = {};
+        ubo.model = glm::mat4(1.0);
+        ubo.view = glm::mat4(1.0);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
+        ubo.proj[1][1] *= -1;
+
+        float angle = glfwGetTime()*15;
+        float distance = 2;
+        float x = glm::sin( glm::radians(angle) ) * distance;
+        float y = glm::cos( glm::radians(angle) ) * distance;
+
+        ubo.view = glm::lookAt(glm::vec3(x,y,2), glm::vec3(0,0,0), glm::vec3(0,0,1));
+        ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.75));
+
+        descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
+    }
 
     //---------------------------------------------------------------------------------
 
@@ -151,7 +168,14 @@ private:
             vkCmdBindVertexBuffers(command_buffers[i], 0, 1, vertex_buffers, offsets);
             vkCmdBindIndexBuffer(command_buffers[i], model_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
 
-            vkCmdBindDescriptorSets(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline_layout, 0, 1, &descriptor_sets[i], 0, nullptr);
+            vkCmdBindDescriptorSets(
+                command_buffers[i], 
+                VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                pipeline.pipeline_layout, 0, 1, 
+                &descriptors.descriptor_sets[i], 
+                0, nullptr
+            );
+
             //vkCmdDraw(command_buffers[i], (uint32_t)model.vertices.size(), 1, 0, 0);
             vkCmdDrawIndexed(command_buffers[i], (uint32_t)model.indices.size(), 1, 0, 0, 0);
 
@@ -167,7 +191,7 @@ private:
         printf("recorded commands \n");
     }
 
-    void prepare_model_buffers()
+    void create_vertex_buffers()
     {
         VkDeviceSize size;
 
@@ -184,114 +208,7 @@ private:
         printf("Vertex and index buffers created \n");
     }
 
-    void create_uniform_buffers(){
-
-        VkDeviceSize size = sizeof(UniformBufferObject);
-        uniform_buffers.resize(instance.surface.image_count);
-
-        for (size_t i = 0; i < instance.surface.image_count; i++) 
-        {
-            uniform_buffers[i].init(&this->instance);
-            uniform_buffers[i].create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        }
-
-        printf("created uniform buffers \n");
-    }
-
-    
-    void update_uniform_buffer(uint32_t current_image)
-    {
-        float width = instance.surface.capabilities.currentExtent.width;
-        float height = instance.surface.capabilities.currentExtent.height;
-
-        UniformBufferObject ubo = {};
-        ubo.model = glm::mat4(1.0);
-        ubo.view = glm::mat4(1.0);
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
-        ubo.proj[1][1] *= -1;
-
-        float angle = glfwGetTime()*15;
-        float distance = 2;
-        float x = glm::sin( glm::radians(angle) ) * distance;
-        float y = glm::cos( glm::radians(angle) ) * distance;
-
-        ubo.view = glm::lookAt(glm::vec3(x,y,2), glm::vec3(0,0,0), glm::vec3(0,0,1));
-        ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.75));
-
-        uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
-    }
-    
-
-    void create_descriptor_pool(){
-        std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
-        pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        pool_sizes[0].descriptorCount = (uint32_t)instance.surface.image_count;
-        pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        pool_sizes[1].descriptorCount = (uint32_t)instance.surface.image_count;
-
-        VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        poolInfo.poolSizeCount = (uint32_t)pool_sizes.size();
-        poolInfo.pPoolSizes = pool_sizes.data();
-        poolInfo.maxSets = (uint32_t)instance.surface.image_count;
-
-        if (vkCreateDescriptorPool(instance.device, &poolInfo, nullptr, &this->descriptor_pool) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor pool!");
-        }
-
-        printf("created descriptor pool \n");
-    }
-
-    void create_descriptor_sets(){
-        std::vector<VkDescriptorSetLayout> layouts(instance.surface.image_count, this->pipeline.descriptor_set_layout);
-
-        VkDescriptorSetAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-        allocInfo.descriptorPool = this->descriptor_pool;
-        allocInfo.descriptorSetCount = (uint32_t)instance.surface.image_count;
-        allocInfo.pSetLayouts = layouts.data();
-
-        descriptor_sets.resize(instance.surface.image_count);
-        if (vkAllocateDescriptorSets(instance.device, &allocInfo, descriptor_sets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate descriptor sets!");
-        }
-
-        printf("Allocated descriptor sets \n");
-
-        for (size_t i = 0; i < instance.surface.image_count; i++) {
-
-            VkDescriptorBufferInfo bufferInfo = {};
-            bufferInfo.buffer = uniform_buffers[i].buffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UniformBufferObject);
-            
-            VkDescriptorImageInfo imageInfo = {};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = texture_image.image_view;
-            imageInfo.sampler = texture_sampler;
-            
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptor_sets[i];
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
-            
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptor_sets[i];
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &imageInfo;
-            
-            vkUpdateDescriptorSets(instance.device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
-        }
-        printf("Descriptor sets ready \n");
-    }
-
-    void create_texture()
+    void create_image_buffers()
     {
         // read image
         int width, height, channel;
@@ -306,36 +223,5 @@ private:
         stbi_image_free(pixels);
 
         printf("created texture \n");
-    }
-
-    void create_texture_sampler()
-    {
-        VkSamplerCreateInfo samplerInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        samplerInfo.magFilter = VK_FILTER_LINEAR; // or VK_FILTER_NEAREST
-        samplerInfo.minFilter = VK_FILTER_LINEAR; // or VK_FILTER_NEAREST
-
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-        samplerInfo.anisotropyEnable = VK_TRUE;
-        samplerInfo.maxAnisotropy = 16;
-
-        samplerInfo.unnormalizedCoordinates = VK_FALSE; // use normalized [0, 1]
-
-        // https://developer.nvidia.com/gpugems/gpugems/part-ii-lighting-and-shadows/chapter-11-shadow-map-antialiasing
-        samplerInfo.compareEnable = VK_FALSE; // for shadow mapping
-        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerInfo.mipLodBias = 0.0f;
-        samplerInfo.minLod = 0.0f;
-        samplerInfo.maxLod = 0.0f;
-
-        if (vkCreateSampler(instance.device, &samplerInfo, nullptr, &texture_sampler) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create texture sampler!");
-        }
-
-        printf("created sampler \n");
     }
 };

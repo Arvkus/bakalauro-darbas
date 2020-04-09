@@ -1,21 +1,20 @@
 #pragma once
 #include "common.hpp"
 #include "instance.hpp"
+#include "descriptors.hpp"
 
 class Pipeline{
 
 public:
     VkRenderPass render_pass;
-    VkDescriptorSetLayout descriptor_set_layout;
-
     VkPipelineLayout pipeline_layout;
     VkPipeline graphics_pipeline;
 
-    void init(Instance *instance)
+    void init(Instance *instance, Descriptors *descriptors)
     {
         this->instance = instance;
+        this->descriptors = descriptors;
         create_render_pass();
-        create_descriptor_set_layout();
         create_graphics_pipeline();
     }
 
@@ -23,12 +22,12 @@ public:
     {   
         vkDestroyPipeline(instance->device, graphics_pipeline, nullptr);
         vkDestroyPipelineLayout(instance->device, pipeline_layout, nullptr);
-        vkDestroyDescriptorSetLayout(instance->device, descriptor_set_layout, nullptr);
         vkDestroyRenderPass(instance->device, render_pass, nullptr);
     }
 
 private:
     Instance *instance;
+    Descriptors *descriptors;
 
     void create_render_pass()
     {
@@ -114,36 +113,6 @@ private:
         }else{
             throw std::runtime_error("failed to create render pass");
         };
-    }
-
-    void create_descriptor_set_layout()
-    {
-        // define:
-        //  descriptor type
-        //  where to use (shader stage)
-        //  tell binding for shader program
-
-        VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-        samplerLayoutBinding.binding = 1;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
-
-        VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        createInfo.bindingCount = (uint32_t)bindings.size();
-        createInfo.pBindings = bindings.data();
-
-        if (vkCreateDescriptorSetLayout(this->instance->device, &createInfo, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
     }
 
     VkShaderModule create_shader_module(const std::vector<char>& code) {
@@ -288,7 +257,7 @@ private:
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {}; 
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &this->descriptor_set_layout;
+        pipelineLayoutInfo.pSetLayouts = &this->descriptors->descriptor_set_layout;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
         if (vkCreatePipelineLayout(this->instance->device, &pipelineLayoutInfo, nullptr, &this->pipeline_layout) != VK_SUCCESS) {
