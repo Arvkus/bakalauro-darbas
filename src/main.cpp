@@ -1,5 +1,6 @@
 #include "common.hpp"
 #include "application.hpp"
+#include "input.hpp"
 
 Application app;
 GLFWwindow *window;
@@ -39,8 +40,6 @@ void render_thread_function()
     }
 }
 
-
-
 int main()
 {
 
@@ -51,6 +50,12 @@ int main()
     window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
     glfwSetWindowTitle(window, TITLE);
 
+    // input
+    glfwSetCursorPosCallback(window, Input::mouse_move_callback);
+    glfwSetMouseButtonCallback(window, Input::mouse_press_callback);
+    glfwSetScrollCallback(window, Input::mouse_scroll_callback);
+    glfwSetKeyCallback(window, Input::key_press_callback);
+    
     // move window to the middle of the screen
     const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     glfwSetWindowPos(window, (mode->width - 800) / 2, (mode->height - 600) / 2);

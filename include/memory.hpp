@@ -37,7 +37,6 @@ protected:
 
 class Buffer : public MemoryObject{
 public:
-    VkDeviceMemory memory;
     VkBuffer buffer;
 
     void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
@@ -72,6 +71,11 @@ public:
         vkMapMemory(instance->device, this->memory, 0, size, 0, &data);
         memcpy(data, source, (size_t)size); // destination, source, size
         vkUnmapMemory(instance->device, this->memory);
+    }
+
+    void destroy(){
+        vkFreeMemory(instance->device, memory, nullptr);
+        vkDestroyBuffer(instance->device, buffer, nullptr);
     }
 };
 
@@ -136,6 +140,8 @@ public:
         transition_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         copy_buffer_to_image(stage.buffer, this->image, width, height); // move image to VRAM
         transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        stage.destroy();
     }
 
     void create_image_view(VkFormat format, VkImageAspectFlags aspectFlags)
@@ -154,6 +160,13 @@ public:
             throw std::runtime_error("failed to create texture image view!");
         }
 
+    }
+
+    void destroy()
+    {
+        vkDestroyImageView(instance->device, image_view, nullptr);
+        vkDestroyImage(instance->device, image, nullptr);
+        vkFreeMemory(instance->device, memory, nullptr);
     }
 
 private:

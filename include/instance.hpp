@@ -50,6 +50,7 @@ public:
 
     void destroy()
     {
+        vkDestroyCommandPool(this->device, transfer_command_pool, nullptr);
         vkDestroySurfaceKHR(this->vulkan_instance, this->surface.vulcan_surface, nullptr);
         vkDestroyDevice(this->device, nullptr);
         vkDestroyInstance(this->vulkan_instance, nullptr);
@@ -354,8 +355,7 @@ private:
         */
 
         for (const auto& available_mode : present_modes) {
-            //  || available_mode == VK_PRESENT_MODE_FIFO_KHR 
-            if (available_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            if (available_mode == VK_PRESENT_MODE_MAILBOX_KHR || available_mode == VK_PRESENT_MODE_FIFO_KHR ) {
                 this->surface.present_mode = available_mode;
                 is_mode_ok = true;
                 break;

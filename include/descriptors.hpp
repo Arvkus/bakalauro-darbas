@@ -14,6 +14,15 @@ public:
         create_descriptor_pool();
     }
 
+    void destroy()
+    {
+        vkDestroyDescriptorPool(instance->device, descriptor_pool, nullptr);
+        vkDestroyDescriptorSetLayout(instance->device, descriptor_set_layout, nullptr);
+        
+        for(int i = 0; i < uniform_buffers.size(); i++) uniform_buffers[i].destroy();
+        vkDestroySampler(instance->device, texture_sampler, nullptr);
+    }
+
     VkSampler texture_sampler;
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorPool descriptor_pool;
