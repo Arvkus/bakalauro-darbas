@@ -164,25 +164,26 @@ public:
 
     //------------------------------------------------------------
 
-    uint32_t accquire_next_image(){
+    std::optional<uint32_t> accquire_next_image(){
         // wait for fence signal (1), first frame is already signaled (behaves like debounce)
         
         vkWaitForFences(instance->device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
         vkResetFences(instance->device, 1, &in_flight_fences[current_frame]); // remove signal (0)
 
-        uint32_t image_index;
+        uint32_t index;
         VkResult result = vkAcquireNextImageKHR(
             instance->device, 
             vulkan_swapchain, 
             UINT64_MAX, // timeout
             image_available_semaphores[current_frame], // signal semaphore
             VK_NULL_HANDLE,
-            &image_index
+            &index
         );
 
+        std::optional<uint32_t> image_index = index;
+
         if(result == VK_ERROR_OUT_OF_DATE_KHR){
-            printf("Swapchain changed state \n");
-            //this->recreate_swapchain();
+            image_index.reset();
             return image_index;
         } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
             throw std::runtime_error("failed to acquire swap chain image!");
@@ -191,7 +192,7 @@ public:
         return image_index;
     }
 
-    void present_image(uint32_t image_index){
+    bool present_image(uint32_t image_index){
         //printf("frame: %i | image: %i \n", current_frame, image_index);
         //std::cin.get();
 
@@ -224,13 +225,13 @@ public:
 
         VkResult result = vkQueuePresentKHR(instance->queues.present_queue, &presentInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-            //this->recreate_swapchain();
+            return false;
         } else if (result != VK_SUCCESS) {
             throw std::runtime_error("failed to present swap chain image!");
         }
 
         current_frame = (current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
-        //printf("Render loop %f \n", glfwGetTime());
+        return true;
     }
 
 

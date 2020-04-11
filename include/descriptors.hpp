@@ -33,7 +33,7 @@ public:
     // specular +
     // roughness +
 
-        void create_descriptor_sets(){
+    void create_descriptor_sets(){
         std::vector<VkDescriptorSetLayout> layouts(instance->surface.image_count, descriptor_set_layout);
 
         VkDescriptorSetAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
@@ -45,8 +45,6 @@ public:
         if (vkAllocateDescriptorSets(instance->device, &allocInfo, descriptor_sets.data()) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate descriptor sets!");
         }
-
-        printf("Allocated descriptor sets \n");
 
         for (size_t i = 0; i < instance->surface.image_count; i++) {
 
@@ -84,7 +82,15 @@ public:
     }
     
 private:
-    Image *diffuse;
+    //-- PBR textures --
+    Image *diffuse; // color
+    Image *normal;  // direction
+
+    Image *occlusion; // R
+    Image *rougness;  // G
+    Image *metalic;   // B
+    //------------------
+    
     Instance *instance;
 
     void create_texture_sampler()
@@ -114,8 +120,6 @@ private:
         if (vkCreateSampler(instance->device, &samplerInfo, nullptr, &texture_sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");
         }
-
-        printf("created sampler \n");
     }
 
     void create_uniform_buffers(){
@@ -178,6 +182,6 @@ private:
             throw std::runtime_error("failed to create descriptor pool!");
         }
 
-        printf("created descriptor pool \n");
+        printf("Created descriptor pool \n");
     }
 };

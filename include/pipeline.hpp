@@ -131,8 +131,6 @@ private:
 
     void create_graphics_pipeline()
     {
-        this->instance->update_surface_capabilities();
-
         // dynamic things in pipeline: size of the viewport, line width and blend constants
         // stages - https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkPipelineStageFlagBits.html
 
@@ -186,7 +184,7 @@ private:
         // viewport - shrink image, scissor - crop image
         // (0, 0) to (width, height)
         // https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/
-        VkViewport viewport = {}; 
+        VkViewport viewport = {}; // flip height (y) axis
         viewport.x = 0.0f;
         viewport.y = (float)this->instance->surface.capabilities.currentExtent.height; 
         viewport.width = (float)this->instance->surface.capabilities.currentExtent.width;

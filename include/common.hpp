@@ -41,6 +41,7 @@ const bool APP_DEBUG = true;
 const char* TITLE = "Vulkan window";
 const int MAX_FRAMES_IN_FLIGHT = 2;
 bool APP_RUNNING = true;
+bool RECREATE_SWAPCHAIN = false;
 
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation",

@@ -43,7 +43,7 @@ public:
     
     void move()
     {
-        //-----------------------------------------------------
+        //------------------------
         // move origin
 
         float x = sin(glm::radians((float)yaw));
@@ -55,7 +55,7 @@ public:
         this->origin.x += y * (Input::Keys::A - Input::Keys::D)*speed;
         this->origin.y -= x * (Input::Keys::A - Input::Keys::D)*speed;
 
-        //-----------------------------------------------------
+        //-----------------------
         // rotate camera
 
         if(Input::Mouse::Middle || Input::Mouse::Left)
@@ -68,12 +68,11 @@ public:
 
             if(pitch >  70) pitch =  70;
             if(pitch < -70) pitch = -70; 
-            
-            //printf("yaw: %i | pitch: %i | %f %f \n ", yaw, pitch, x, y);
         }
-        
-        distance -= (distance - Input::Mouse::Wheel) <= 2.0? 0.0: Input::Mouse::Wheel;
-    }
-    
 
+        //-----------------------
+        // zoom 
+
+        distance -= (distance - Input::Mouse::Wheel) <= 1.0? 0.0 : Input::Mouse::Wheel;
+    }
 };

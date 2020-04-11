@@ -10,18 +10,25 @@
 
 // + mouse input
 // + uniform update based on input
-// - prepare pbr images
+// - prepare pbr images .. https://www.khronos.org/blog/art-pipeline-for-gltf
 // + delete objects on exit
-// - swapchain recreation
+// + swapchain recreation
 // + download 12 years a slave
 
 class Application{
 public:
-    
-    void draw(){
-        uint32_t next_image = swapchain.accquire_next_image();
-        update_uniform_buffer(next_image);
-        swapchain.present_image(next_image);
+
+    void draw()
+    {
+        if(RECREATE_SWAPCHAIN) return; // do not render while swapchain is recreating
+
+        std::optional<uint32_t> next_image = swapchain.accquire_next_image();
+        if(!next_image.has_value()) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
+
+        update_uniform_buffer(next_image.value());
+        
+        bool is_presented = swapchain.present_image(next_image.value());
+        if(!is_presented) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
     }
 
     void init_vulkan(GLFWwindow* window)
@@ -43,8 +50,32 @@ public:
         this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
 
-    void recreate_swapchain(){
+    void recreate_swapchain()
+    {
+        instance.update_surface_capabilities();
+        vkDeviceWaitIdle(instance.device);
 
+        printf("---------------------\n");
+        
+        // destroy outdated objects
+        this->swapchain.destroy();
+        this->descriptors.destroy();
+        this->pipeline.destroy();
+        vkDestroyCommandPool(instance.device, command_pool, nullptr);
+
+        // recreate objects
+        
+        this->descriptors.init(&this->instance);
+        this->pipeline.init(&this->instance, &this->descriptors);
+        this->swapchain.init(&this->instance, &this->pipeline);
+
+        this->descriptors.bind_diffuse_image(&this->texture_image);
+        this->descriptors.create_descriptor_sets();
+
+        create_command_pool();
+        create_command_buffers();
+
+        this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
 
     void destroy()
@@ -96,26 +127,10 @@ private:
         ubo.model = glm::mat4(1.0);
         ubo.view = camera.cframe(); 
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
-        //ubo.proj[1][1] *= -1;
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
         descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
     }
-
-    void update_uniform_buffer2(uint32_t current_image)
-    {
-        float width = instance.surface.capabilities.currentExtent.width;
-        float height = instance.surface.capabilities.currentExtent.height;
-
-        UniformBufferObject ubo = {};
-        ubo.model = glm::mat4(1.0);
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
-        ubo.proj[1][1] *= -1;
-
-        descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
-    }
-
 
     //---------------------------------------------------------------------------------
 
@@ -125,16 +140,9 @@ private:
         ci.flags = 0;
         ci.queueFamilyIndex = instance.queues.graphics_family_index;
 
-        if(vkCreateCommandPool(instance.device, &ci, nullptr, &this->command_pool) == VK_SUCCESS)
-        {
-            printf("Created command pool \n");
-        }   
-        else
-        {
+        if(vkCreateCommandPool(instance.device, &ci, nullptr, &this->command_pool) != VK_SUCCESS){
             throw std::runtime_error("failed to create command pool!");
         };
-
-        //test 
     }
 
     void create_command_buffers()
@@ -202,7 +210,7 @@ private:
             }
         }
 
-        printf("recorded commands \n");
+        printf("Recorded commands \n");
     }
 
     void create_vertex_buffers()
@@ -218,8 +226,6 @@ private:
         model_indices.init(&this->instance);
         model_indices.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         model_indices.fill_memory(model.indices.data(), size);
-
-
 
         printf("Vertex and index buffers created \n");
     }
@@ -238,6 +244,6 @@ private:
         this->texture_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         stbi_image_free(pixels);
 
-        printf("created texture \n");
+        printf("Created texture \n");
     }
 };
