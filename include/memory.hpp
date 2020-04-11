@@ -71,6 +71,8 @@ public:
         vkMapMemory(instance->device, this->memory, 0, size, 0, &data);
         memcpy(data, source, (size_t)size); // destination, source, size
         vkUnmapMemory(instance->device, this->memory);
+
+        
     }
 
     void destroy(){

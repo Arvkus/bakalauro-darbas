@@ -105,8 +105,8 @@ private:
         ci.pAttachments = attachments.data();
         ci.subpassCount = 1;
         ci.pSubpasses = &subpass;
-        ci.dependencyCount = 1;
-        ci.pDependencies = &dependency;
+        //ci.dependencyCount = 1;
+        //ci.pDependencies = &dependency;
 
         if(vkCreateRenderPass(this->instance->device, &ci, nullptr, &render_pass) == VK_SUCCESS){
             printf("Created render pass \n");
@@ -185,11 +185,12 @@ private:
 
         // viewport - shrink image, scissor - crop image
         // (0, 0) to (width, height)
+        // https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/
         VkViewport viewport = {}; 
         viewport.x = 0.0f;
-        viewport.y = 0.0f;
+        viewport.y = (float)this->instance->surface.capabilities.currentExtent.height; 
         viewport.width = (float)this->instance->surface.capabilities.currentExtent.width;
-        viewport.height = (float)this->instance->surface.capabilities.currentExtent.width;
+        viewport.height = -(float)this->instance->surface.capabilities.currentExtent.height;
         viewport.minDepth = 0.0f; // depth values for framebuffer
         viewport.maxDepth = 1.0f;
 
@@ -211,8 +212,8 @@ private:
         rasterizer.rasterizerDiscardEnable = VK_FALSE; // if true, geomentry never passes through rasterizer
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // fill triangles
         rasterizer.lineWidth = 1.0f;
-        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // VK_FRONT_FACE_COUNTER_CLOCKWISE; // FRONT FACE PROBLEMS
         rasterizer.depthBiasEnable = VK_FALSE; // for shadow mapping
 
         // anti aliasing, requeres to enable GPU feature
@@ -245,11 +246,6 @@ private:
         colorBlending.logicOp = VK_LOGIC_OP_COPY; // optional
         colorBlending.attachmentCount = 1;
         colorBlending.pAttachments = &colorBlendAttachment;
-        colorBlending.blendConstants[0] = 0.0f;// Optional
-        colorBlending.blendConstants[1] = 0.0f;// Optional
-        colorBlending.blendConstants[2] = 0.0f;// Optional
-        colorBlending.blendConstants[3] = 0.0f;// Optional
-
         
         // `PipelineLayout` - describes the complete set of resources that can be accessed by a pipeline.
         // Sequence of descriptors that have specific layout, determines interface between shaders
@@ -282,8 +278,8 @@ private:
         pipelineInfo.subpass = 0;
 
         // required for switching between multiple pipelines
-        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-        pipelineInfo.basePipelineIndex = -1; // Optional
+        //pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+        //pipelineInfo.basePipelineIndex = -1; // Optional
 
         if (vkCreateGraphicsPipelines(this->instance->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphics_pipeline) != VK_SUCCESS) {
             throw std::runtime_error("failed to create graphics pipeline!");

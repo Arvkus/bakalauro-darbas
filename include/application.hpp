@@ -8,12 +8,12 @@
 #include "input.hpp"
 #include "camera.hpp"
 
-// - mouse input
-// - uniform update based on input
+// + mouse input
+// + uniform update based on input
 // - prepare pbr images
 // + delete objects on exit
 // - swapchain recreation
-// - download 12 years a slave
+// + download 12 years a slave
 
 class Application{
 public:
@@ -82,9 +82,7 @@ private:
 
     //---------------------------------------------------------------------------------
 
-    float angle = 0; //glfwGetTime()*15;
-
-    void update_uniform_buffer2(uint32_t current_image)
+    void update_uniform_buffer(uint32_t current_image)
     {
         camera.move();
         Input::reset();
@@ -98,26 +96,26 @@ private:
         ubo.model = glm::mat4(1.0);
         ubo.view = camera.cframe(); 
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
-        ubo.proj[1][1] *= -1;
-
-        //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,1.5));
+        //ubo.proj[1][1] *= -1;
+        //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
         descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
     }
 
-    void update_uniform_buffer(uint32_t current_image)
+    void update_uniform_buffer2(uint32_t current_image)
     {
         float width = instance.surface.capabilities.currentExtent.width;
         float height = instance.surface.capabilities.currentExtent.height;
 
         UniformBufferObject ubo = {};
-        ubo.model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime() * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.model = glm::mat4(1.0);
         ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), width/height, 0.1f, 10.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
         ubo.proj[1][1] *= -1;
 
         descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
     }
+
 
     //---------------------------------------------------------------------------------
 
@@ -220,6 +218,8 @@ private:
         model_indices.init(&this->instance);
         model_indices.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         model_indices.fill_memory(model.indices.data(), size);
+
+
 
         printf("Vertex and index buffers created \n");
     }
