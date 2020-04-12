@@ -7,14 +7,9 @@
 #include "model.hpp"
 #include "input.hpp"
 #include "camera.hpp"
+#include "loader.hpp"
 
-// + mouse input
-// + uniform update based on input
-// - prepare pbr images .. https://www.khronos.org/blog/art-pipeline-for-gltf
-// + delete objects on exit
-// + swapchain recreation
-// + download 12 years a slave
-
+// global illumination -> ambient occlusion
 class Application{
 public:
 
@@ -31,6 +26,7 @@ public:
         if(!is_presented) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
     }
 
+    Model model;
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
@@ -38,7 +34,10 @@ public:
         this->pipeline.init(&this->instance, &this->descriptors);
         this->swapchain.init(&this->instance, &this->pipeline);
         
-        create_vertex_buffers();
+        Loader loader = Loader();
+        model = loader.load_glb("models/complex.glb");
+
+        create_model_buffers(model);
         create_image_buffers();
 
         this->descriptors.bind_diffuse_image(&this->texture_image);
@@ -102,7 +101,6 @@ private:
     Swapchain swapchain;
 
     Camera camera = Camera();
-    Model model = Model();
     Buffer model_vertices;
     Buffer model_indices;
 
@@ -199,7 +197,7 @@ private:
             );
 
             //vkCmdDraw(command_buffers[i], (uint32_t)model.vertices.size(), 1, 0, 0);
-            vkCmdDrawIndexed(command_buffers[i], (uint32_t)model.indices.size(), 1, 0, 0, 0);
+            vkCmdDrawIndexed(command_buffers[i], (uint32_t)model.meshes[0].indices.size(), 1, 0, 0, 0);
 
             vkCmdEndRenderPass(command_buffers[i]);
 
@@ -213,19 +211,19 @@ private:
         printf("Recorded commands \n");
     }
 
-    void create_vertex_buffers()
+    void create_model_buffers(const Model& model)
     {
         VkDeviceSize size;
 
-        size = sizeof(Vertex) * model.vertices.size();
+        size = sizeof(Vertex) * model.meshes[0].vertices.size();
         model_vertices.init(&this->instance);
         model_vertices.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        model_vertices.fill_memory(model.vertices.data(), size);
+        model_vertices.fill_memory(model.meshes[0].vertices.data(), size);
 
-        size = sizeof(uint16_t) * model.indices.size();
+        size = sizeof(uint16_t) * model.meshes[0].indices.size();
         model_indices.init(&this->instance);
         model_indices.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        model_indices.fill_memory(model.indices.data(), size);
+        model_indices.fill_memory(model.meshes[0].indices.data(), size);
 
         printf("Vertex and index buffers created \n");
     }

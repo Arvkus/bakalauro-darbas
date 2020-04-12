@@ -1,7 +1,34 @@
 #include "common.hpp"
 
+class Mesh{
+public:
+    std::string name;
+    std::vector<Vertex> vertices;
+    std::vector<uint16_t> indices;
+
+    glm::vec3 scale = glm::vec3(1);
+    glm::vec3 translation = glm::vec3(0);
+    glm::quat rotation = glm::quat(1,0,0,0);
+
+    std::vector<Mesh> children;
+
+private:
+
+};
+
 
 class Model{
+public:
+    std::string name;
+    std::vector<Mesh> meshes; 
+};
+
+
+
+
+
+
+class Model2{
 public:
 
     std::vector<Vertex> vertices = {

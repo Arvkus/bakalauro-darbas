@@ -71,5 +71,6 @@
         "condition_variable": "cpp",
         "mutex": "cpp"
     },
-    "terminal.integrated.shell.windows": "cmd.exe"
+    "terminal.integrated.shell.windows": "cmd.exe",
+    "C_Cpp.errorSquiggles": "Enabled"
 }

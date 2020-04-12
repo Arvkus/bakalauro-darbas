@@ -59,6 +59,7 @@ uint64_t timestamp_nano()
 /// Position, normal, texture
 struct Vertex
 {
+	Vertex(){};
 	Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture){
 		this->position = position;
 		this->normal = normal;
@@ -110,16 +111,6 @@ struct UniformBufferObject {
 };
 
 //-------------------------------------------------------------------
-/// Console color indices
-enum ConsoleColor{
-    Blue=1,
-    Green=2,
-    Red=4,
-    White=7,
-    Grey=8,
-};
-
-//-------------------------------------------------------------------
         
 bool is_validation_layers_supported()
 {
@@ -146,5 +137,161 @@ bool is_validation_layers_supported()
 
 	return true;
 }
+
+//-------------------------------------------------------------------
+//-------------------------------------------------------------------
+// Console output functions
+
+namespace out{
+	enum Color{
+		Black=0,
+		Blue=1,
+		Green=2,
+		Red=4,
+		Purple=5,
+		Orange=6,
+		White=7,
+		Grey=8,
+		Lime=10,
+		Cyan=11,
+		Yellow=14,
+	};
+
+	namespace details{
+		void output(const glm::quat& m){ std::cout<<std::setprecision(3)<<std::fixed<<"["<<m[0]<<" "<<m[1]<<" "<<m[2]<<" "<<m[3]<<"]"; }
+		void output(const glm::vec4& m){ std::cout<<std::setprecision(3)<<std::fixed<<"["<<m[0]<<" "<<m[1]<<" "<<m[2]<<" "<<m[3]<<"]"; }
+		void output(const glm::vec3& m){ std::cout<<std::setprecision(3)<<std::fixed<<"["<<m[0]<<" "<<m[1]<<" "<<m[2]<<"]"; }
+		void output(const glm::vec2& m){ std::cout<<std::setprecision(3)<<std::fixed<<"["<<m[0]<<" "<<m[1]<<"]"; }
+
+		void output(const glm::mat4& m){
+			std::cout.precision(3);
+			std::cout<<std::endl<<std::fixed;
+			for(int i = 0; i < 4; i++){
+				for(int j = 0; j < 4; j++){
+					std::cout<<std::setw(7)<<m[j][i]<<" ";
+				}
+				std::cout<<std::endl;
+			}
+			std::cout<<std::endl;
+		}
+
+		void output(const glm::mat3& m){
+			std::cout.precision(3);
+			std::cout<<std::endl<<std::fixed;
+			for(int i = 0; i < 3; i++){
+				for(int j = 0; j < 3; j++){
+					std::cout<<m[j][i]<<" ";
+				}
+				std::cout<<std::endl;
+			}
+			std::cout<<std::endl;
+		}
+
+		void output(const glm::mat2& m){
+			std::cout.precision(3);
+			std::cout<<std::endl<<std::fixed;
+			for(int i = 0; i < 2; i++){
+				for(int j = 0; j < 2; j++){
+					std::cout<<m[j][i]<<" ";
+				}
+				std::cout<<std::endl;
+			}
+			std::cout<<std::endl;
+		}
+
+		void output(const  uint8_t& m){ std::cout<<m; }
+		void output(const uint16_t& m){ std::cout<<m; }
+		void output(const uint32_t& m){ std::cout<<m; }
+		void output(const uint64_t& m){ std::cout<<m; }
+
+		void output(const int& m){ std::cout<<m; }
+		void output(const char& m){ std::cout<<m; }
+		void output(const float& m){ std::cout<<std::setprecision(3)<<m; }
+		void output(const double& m){ std::cout<<std::setprecision(3)<<m; }
+		void output(const std::string& m){ std::cout<<m; }
+
+		void output(const nlohmann::json& m){ std::cout<<m; } 
+		void output(const char* m){ std::cout<<m; } 
+
+		template<typename TYPE>
+		void output(const std::vector<TYPE>& vector){
+			std::cout<<"( ";
+			for(const TYPE& m : vector){ output(m); std::cout<<" "; }
+			std::cout<<")";
+		}
+
+	}
+
+	//---------------------------------------
+
+	void print(){}
+
+	template< typename FIRST >
+	void print( const FIRST& first)
+	{
+		details::output(first);
+	}
+
+	template< typename FIRST, typename... REST > 
+	void print( const FIRST& first, const REST&... rest )
+	{
+		details::output(first);
+		print(rest...) ;
+	}
+
+	//-------------------
+
+	void printl(){ std::cout<<std::endl; }
+
+	template< typename FIRST >
+	void printl( const FIRST& first)
+	{
+		details::output(first);
+		std::cout<<std::endl;
+	}
+
+	template< typename FIRST, typename... REST > 
+	void printl( const FIRST& first, const REST&... rest )
+	{
+		details::output(first);
+		printl(rest...) ;
+		std::cout<<std::endl;
+	}
+
+	//---------------------------------------
+
+	void warn(const std::string& msg)
+	{
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::Orange);
+		details::output(msg);
+		std::cout<<std::endl;
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
+	};
+
+	void error(const std::string& msg)
+	{
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::Red);
+		details::output(msg);
+		std::cout<<std::endl;
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
+	};
+
+	void success(const std::string& msg)
+	{
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::Green);
+		details::output(msg);
+		std::cout<<std::endl;
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
+	}
+
+	void highlight(const std::string& msg, out::Color color = out::Color::Yellow)
+	{
+		SetConsoleTextAttribute(H_CONSOLE, color);
+		details::output(msg);
+		std::cout<<std::endl;
+		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
+	}
+}
+
 
 //-------------------------------------------------------------------

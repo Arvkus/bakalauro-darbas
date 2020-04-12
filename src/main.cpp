@@ -1,10 +1,20 @@
 #include "common.hpp"
 #include "application.hpp"
 #include "input.hpp"
+#include "loader.hpp"
 
 Application app;
 GLFWwindow *window;
-HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+int main2(){
+
+    Loader loader = Loader();
+    Model model = loader.load_glb("models/complex.glb");
+    out::print(model.meshes.size());
+
+    std::cin.get();
+    return 0;
+}
 
 void render_thread_function()
 {
@@ -33,10 +43,8 @@ void render_thread_function()
     }
     catch (const std::exception &e)
     {
-        SetConsoleTextAttribute(hConsole, ConsoleColor::Red);
-        std::cerr << "Render error: " << e.what() << std::endl;
-        //std::cin.get();
-        //glfwSetWindowShouldClose(window, GLFW_TRUE);
+        out::printl("Render error: ", e.what());
+        std::cin.get();
     }
 }
 
@@ -60,13 +68,14 @@ int main()
     glfwSetWindowPos(window, (mode->width - 800) / 2, (mode->height - 600) / 2);
 
     try
-    {
+    {   
+        uint64_t start = timestamp_milli();
         app.init_vulkan(window);
+        out::success(std::string("Load time: ") + std::to_string((float)(timestamp_milli() - start)/1000));
     }
     catch (const std::exception &e)
     {
-        SetConsoleTextAttribute(hConsole, ConsoleColor::Red);
-        std::cerr << "Initialisation error: " << e.what() << std::endl;
+        out::print("Initialisation error: ", e.what());
         std::cin.get();
         return EXIT_FAILURE;
     }

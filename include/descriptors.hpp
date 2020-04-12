@@ -85,10 +85,12 @@ private:
     //-- PBR textures --
     Image *diffuse; // color
     Image *normal;  // direction
-
+    Image *orm;
+    /*
     Image *occlusion; // R
     Image *rougness;  // G
     Image *metalic;   // B
+    */
     //------------------
     
     Instance *instance;
