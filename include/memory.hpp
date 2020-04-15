@@ -65,10 +65,10 @@ public:
         vkBindBufferMemory(instance->device, this->buffer, this->memory, 0);
     }
 
-    void fill_memory(const void* source, VkDeviceSize size)
+    void fill_memory(const void* source, VkDeviceSize size, uint32_t offset = 0)
     {
         void* data; // memory location to where to copy
-        vkMapMemory(instance->device, this->memory, 0, size, 0, &data);
+        vkMapMemory(instance->device, this->memory, offset, size, 0, &data);
         memcpy(data, source, (size_t)size); // destination, source, size
         vkUnmapMemory(instance->device, this->memory);
 

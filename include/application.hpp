@@ -44,6 +44,7 @@ public:
 
     Model model;
     Model skybox;
+    Model car;
 
     void init_vulkan(GLFWwindow* window)
     {   
@@ -65,6 +66,8 @@ public:
 
         model = loader.load_glb("models/complex.glb");
         model.create_buffers(&this->instance);
+
+        car = loader.load_glb("models/car.glb");
 
         create_image_buffers();
         create_enviroment_buffer();
