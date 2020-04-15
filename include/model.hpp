@@ -12,6 +12,26 @@ public:
 
     std::vector<Mesh> children;
 
+    void draw()
+    {
+        /*
+        vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &model.vertex_buffer.buffer, offsets);
+        vkCmdBindIndexBuffer(command_buffers[i], model.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+
+        vkCmdBindDescriptorSets(
+            command_buffers[i], 
+            VK_PIPELINE_BIND_POINT_GRAPHICS, 
+            pipeline.pipeline_layout, 0, 1, 
+            &descriptors.descriptor_sets[i], 
+            0, nullptr
+        );
+
+        //vkCmdDraw(command_buffers[i], (uint32_t)model.vertices.size(), 1, 0, 0);
+        vkCmdDrawIndexed(command_buffers[i], (uint32_t)model.meshes[0].indices.size(), 1, 0, 0, 0);
+        */
+
+    }
+
 private:
 
 };

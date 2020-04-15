@@ -65,7 +65,7 @@ public:
 
             yaw = (yaw + (int)x ) % 360;
             pitch = (pitch + (int)y );
-
+            
             if(pitch >  70) pitch =  70;
             if(pitch < -70) pitch = -70; 
         }

@@ -48,8 +48,6 @@ private:
     void validate_accessor(uint32_t attribute_id)
     {
         json attribute = content["accessors"][attribute_id];
-
-
     }
 
     //----------------------------------------------------

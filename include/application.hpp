@@ -60,7 +60,7 @@ public:
         this->swapchain.init(&this->instance, &this->render_pass);
         
         Loader loader = Loader();
-        skybox = loader.load_glb("models/cube.glb");
+        skybox = loader.load_glb("models/skysphere.glb");
         skybox.create_buffers(&this->instance);
 
         model = loader.load_glb("models/complex.glb");
@@ -95,8 +95,12 @@ public:
         // recreate objects
         
         this->descriptors.init(&this->instance);
+
         this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
         this->pipeline.create_graphics_pipeline();
+
+        this->skybox_pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
+        this->skybox_pipeline.create_skybox_pipeline();
 
         this->swapchain.init(&this->instance, &this->render_pass);
 
@@ -204,6 +208,8 @@ private:
             render_pass_bi.clearValueCount = (uint32_t)clear_values.size();
             render_pass_bi.pClearValues = clear_values.data();
 
+            VkDeviceSize offsets[1] = {0};
+
             VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
             vkBeginCommandBuffer(command_buffers[i], &begin_info);
             
@@ -215,10 +221,7 @@ private:
             //------------------------------------------
             
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
-
-            VkBuffer vertex_buffers1[] = {skybox.vertex_buffer.buffer};
-            VkDeviceSize offsets1[] = {0};
-            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, vertex_buffers1, offsets1);
+            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &skybox.vertex_buffer.buffer, offsets);
             vkCmdBindIndexBuffer(command_buffers[i], skybox.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
 
             vkCmdBindDescriptorSets(
@@ -236,9 +239,7 @@ private:
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
             // VK_PIPELINE_BIND_POINT_GRAPHICS - specify if graphics or compute pipeline
 
-            VkBuffer vertex_buffers[] = {model.vertex_buffer.buffer};
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, vertex_buffers, offsets);
+            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &model.vertex_buffer.buffer, offsets);
             vkCmdBindIndexBuffer(command_buffers[i], model.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
 
             vkCmdBindDescriptorSets(
@@ -275,7 +276,7 @@ private:
 
         this->texture_image.init(&this->instance);
         this->texture_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        this->texture_image.fill_memory(width, height, pixels);
+        this->texture_image.fill_memory(width, height, 4, pixels);
         this->texture_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         stbi_image_free(pixels);
 
@@ -284,32 +285,21 @@ private:
 
     void create_enviroment_buffer()
     {
-                // read image
-        int width = 0, height = 0, channel = 0;
-        stbi_uc* pixels = stbi_load("textures/image.jpg", &width, &height, &channel, STBI_rgb_alpha);
-        if(!pixels) throw std::runtime_error("failed to load texture image!");
-
-        this->texture_image.init(&this->instance);
-        this->texture_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        this->texture_image.fill_memory(width, height, pixels);
-        this->texture_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-        stbi_image_free(pixels);
-
-
-        /*
         int width = 0, height = 0, channel = 0; // 360 180 3
-        stbi_uc* pixels = stbi_load("textures/lake.hdr", &width, &height, &channel, 0);
+        stbi_uc* pixels = stbi_load("textures/tonemaps/pond_bridge.jpg", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
         msg::printl(width, " ", height, " ", channel);
 
+        //  VK_FORMAT_R32G32B32A32_SFLOAT
         this->enviroment_image.init(&this->instance);
-        this->enviroment_image.create_cube_image(width, height, VK_FORMAT_BC2_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        this->enviroment_image.fill_cube_memory(width, height, pixels);
-        this->enviroment_image.create_cube_image_view(VK_FORMAT_BC2_UNORM_BLOCK);
+        this->enviroment_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        this->enviroment_image.fill_memory(width, height, 4, pixels);
+        this->enviroment_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         stbi_image_free(pixels);
-        */
+        
         msg::printl("enviroment created");
     }   
 };
 
+// https://hdrihaven.com/hdri/?c=night&h=pond_bridge_night
 //https://github.com/SaschaWillems/Vulkan/blob/master/examples/texturecubemap/texturecubemap.cpp

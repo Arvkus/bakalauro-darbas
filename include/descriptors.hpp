@@ -64,7 +64,7 @@ public:
             enviromentInfo.imageView = enviroment->image_view; //texture_image.image_view;
             enviromentInfo.sampler = texture_sampler;
             
-            std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+            std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptor_sets[i];
@@ -81,7 +81,7 @@ public:
             descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfo;
-            /*
+            
             descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[2].dstSet = descriptor_sets[i];
             descriptorWrites[2].dstBinding = 2;
@@ -89,7 +89,7 @@ public:
             descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pImageInfo = &enviromentInfo;
-            */
+            
             
             
             vkUpdateDescriptorSets(instance->device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
@@ -174,15 +174,14 @@ private:
         samplerLayoutBinding.descriptorCount = 1;
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        /*
+        
         VkDescriptorSetLayoutBinding skyboxLayoutBinding = {};
-        samplerLayoutBinding.binding = 2;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        */
-
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding/*, skyboxLayoutBinding*/};
+        skyboxLayoutBinding.binding = 2;
+        skyboxLayoutBinding.descriptorCount = 1;
+        skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        
+        std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboLayoutBinding, samplerLayoutBinding, skyboxLayoutBinding };
 
         VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         createInfo.bindingCount = (uint32_t)bindings.size();
@@ -194,13 +193,13 @@ private:
     }
 
     void create_descriptor_pool(){
-        std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
+        std::array<VkDescriptorPoolSize, 3> pool_sizes = {};
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[0].descriptorCount = (uint32_t)instance->surface.image_count;
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         pool_sizes[1].descriptorCount = (uint32_t)instance->surface.image_count;
-        // pool_sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        // pool_sizes[2].descriptorCount = (uint32_t)instance->surface.image_count;
+        pool_sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        pool_sizes[2].descriptorCount = (uint32_t)instance->surface.image_count;
 
         VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         poolInfo.poolSizeCount = (uint32_t)pool_sizes.size();

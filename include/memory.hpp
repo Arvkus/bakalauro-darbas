@@ -127,9 +127,9 @@ public:
     }
 
 
-    void fill_memory(uint32_t width, uint32_t height, const void *source)
+    void fill_memory(uint32_t width, uint32_t height, uint32_t channel, const void *source)
     {   
-        VkDeviceSize size = width * height * 4; // RGBA - 4
+        VkDeviceSize size = width * height * channel; // RGBA - 4
         Buffer stage;
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -209,7 +209,7 @@ public:
 
     void fill_cube_memory(uint32_t width, uint32_t height, const void *source)
     {
-        VkDeviceSize size = width * height * 3; // RGB - 3
+        VkDeviceSize size = width * height * 4; //.hdr - 32 bits per channel and 4 channels
         Buffer stage;
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -221,7 +221,6 @@ public:
 
 		for (uint32_t face = 0; face < 6; face++)
 		{
-
             VkBufferImageCopy bufferCopyRegion = {};
             bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             bufferCopyRegion.imageSubresource.mipLevel = 0;
