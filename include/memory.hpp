@@ -126,6 +126,7 @@ public:
         vkBindImageMemory(instance->device, this->image, this->memory, 0);
     }
 
+
     void fill_memory(uint32_t width, uint32_t height, const void *source)
     {   
         VkDeviceSize size = width * height * 4; // RGBA - 4
@@ -133,18 +134,15 @@ public:
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         stage.fill_memory(source, size); // move image to prepared buffer (RAM)
-        /*
-        void* data; // memory location to where to copy
-        vkMapMemory(instance->device, stage.memory, 0, size, 0, &data);
-        memcpy(data, source, (size_t)size); // destination, source, size
-        vkUnmapMemory(instance->device, stage.memory);
-        */
+ 
         transition_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         copy_buffer_to_image(stage.buffer, this->image, width, height); // move image to VRAM
         transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         stage.destroy();
     }
+
+
 
     void create_image_view(VkFormat format, VkImageAspectFlags aspectFlags)
     {
@@ -171,9 +169,117 @@ public:
         vkFreeMemory(instance->device, memory, nullptr);
     }
 
-private:
-    void transition_layout(VkImageLayout new_layout)
+    //----------------------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------------------
+
+    void create_cube_image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage)
     {
+        this->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        VkImageCreateInfo ci = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        ci.imageType = VK_IMAGE_TYPE_2D;
+        ci.extent = { width, height, 1};
+        ci.format = format;
+        ci.usage = usage;
+        ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ci.initialLayout = this->current_layout;
+        ci.arrayLayers = 6; // Cube faces count as array layers in Vulkan
+        ci.mipLevels = 1;
+        ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        ci.samples = VK_SAMPLE_COUNT_1_BIT;
+        ci.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT; // This flag is required for cube map images
+        
+        if(vkCreateImage(instance->device, &ci, nullptr, &this->image) != VK_SUCCESS){
+            throw std::runtime_error("failed to create image!");
+        };
+
+        VkMemoryRequirements mem_requirements;
+        vkGetImageMemoryRequirements(instance->device, this->image, &mem_requirements);
+
+        VkMemoryAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        alloc_info.allocationSize = mem_requirements.size;
+        alloc_info.memoryTypeIndex = find_memory_type(mem_requirements.memoryTypeBits, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT);
+
+        if(vkAllocateMemory(instance->device, &alloc_info, nullptr, &this->memory) != VK_SUCCESS){
+            throw std::runtime_error("failed to allocate memory for image!");
+        };
+
+        vkBindImageMemory(instance->device, this->image, this->memory, 0);
+    }
+
+    void fill_cube_memory(uint32_t width, uint32_t height, const void *source)
+    {
+        VkDeviceSize size = width * height * 3; // RGB - 3
+        Buffer stage;
+        stage.init(instance);
+        stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        stage.fill_memory(source, size); // move image to prepared buffer (RAM)
+
+        
+        std::vector<VkBufferImageCopy> bufferCopyRegions;
+		uint32_t offset = 0;
+
+		for (uint32_t face = 0; face < 6; face++)
+		{
+
+            VkBufferImageCopy bufferCopyRegion = {};
+            bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            bufferCopyRegion.imageSubresource.mipLevel = 0;
+            bufferCopyRegion.imageSubresource.baseArrayLayer = face;
+            bufferCopyRegion.imageSubresource.layerCount = 1;
+            bufferCopyRegion.imageExtent = {width, height, 1};
+            bufferCopyRegion.bufferOffset = 0;
+            bufferCopyRegions.push_back(bufferCopyRegion);
+		}
+
+        VkImageSubresourceRange range = {};
+		range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = 1;
+		range.layerCount = 6;
+
+        transition_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+
+        VkCommandBuffer commandBuffer = this->instance->begin_single_use_command();
+
+        vkCmdCopyBufferToImage(
+            commandBuffer,
+            stage.buffer,
+            image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            static_cast<uint32_t>(bufferCopyRegions.size()),
+            bufferCopyRegions.data()
+        );
+        this->instance->end_single_use_command(commandBuffer);
+
+        transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+    }
+
+    void create_cube_image_view(VkFormat format)
+    {
+        VkImageViewCreateInfo viewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        viewInfo.image = image;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        viewInfo.format = format;
+        viewInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        viewInfo.subresourceRange.layerCount = 6;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+
+        if (vkCreateImageView(instance->device, &viewInfo, nullptr, &image_view) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture image view!");
+        }
+    }
+
+    //----------------------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------------------
+
+
+private:
+
+    void transition_layout(VkImageLayout new_layout, VkImageSubresourceRange range = {
+        VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
+    }){
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         barrier.oldLayout = current_layout;
         barrier.newLayout = new_layout;
@@ -182,11 +288,14 @@ private:
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
         barrier.image = image;
+        barrier.subresourceRange = range;
+        /*
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
+        */
 
         //-------------------------------------------------------------
 

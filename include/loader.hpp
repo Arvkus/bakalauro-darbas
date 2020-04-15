@@ -15,7 +15,7 @@ private:
     /// Check if json has value
     bool is(const json& node, const std::string& value){ return node.find(value) != node.end(); }
     /// Print space 'n' amount of times
-    void gap(int n){for(int i=0;i<n;i++)out::print("  ");}
+    void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
 
     //----------------------------------------------------
     /// get primitive's all buffer bytes
@@ -88,7 +88,7 @@ private:
             ) : glm::quat(1,0,0,0);
 
             gap(depth);
-            out::highlight(model_mesh.name);
+            msg::highlight(model_mesh.name);
 
             // get mesh primitives
             // https://community.khronos.org/t/questions-about-multiple-primitives-per-mesh-in-gltf-file/104013/2
@@ -192,7 +192,7 @@ public:
                 file.read((char*)&length, 4);
 
                 if(0x46546C67 == magic){
-                    out::print(path, " | 'glb", version, "' file format | ", length, " bytes (", (float)length/1024/1024, " MB)\n");
+                    msg::print(path, " | 'glb", version, "' file format | ", length, " bytes (", (float)length/1024/1024, " MB)\n");
                 }else{
                     throw std::runtime_error(std::string("file is not .glb or is corrupted: ") + path);
                 }
@@ -236,13 +236,13 @@ public:
             model.meshes = build_meshes(content["scenes"][0]["nodes"]);
             model.name = path;
 
-            out::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
+            msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
             return model;
         }catch(const json::exception& e){
-            out::warn(std::string("Loader: ") + e.what());
+            msg::warn(std::string("Loader: ") + e.what());
             return Model();
         }catch(const std::exception& e){
-            out::warn(std::string("Loader: ") + e.what());
+            msg::warn(std::string("Loader: ") + e.what());
             return Model();
         };
     }

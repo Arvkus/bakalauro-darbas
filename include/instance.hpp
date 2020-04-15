@@ -289,6 +289,8 @@ private:
             VK_MEMORY_PROPERTY_HOST_CACHED_BIT   = 10
         */
 
+       msg::printl(device_features.textureCompressionETC2, device_features.textureCompressionBC, device_features.textureCompressionASTC_LDR);
+
        return is_device_extensions_supported(physical_device) && device_features.samplerAnisotropy;
     }
 

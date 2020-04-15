@@ -19,15 +19,42 @@ private:
 
 class Model{
 public:
+    Buffer vertex_buffer;
+    Buffer index_buffer;
+
     std::string name;
     std::vector<Mesh> meshes; 
+
+    void create_buffers(Instance *instance)
+    {
+        VkDeviceSize size;
+
+        size = sizeof(Vertex) * meshes[0].vertices.size();
+        vertex_buffer.init(instance);
+        vertex_buffer.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        vertex_buffer.fill_memory(meshes[0].vertices.data(), size);
+
+        size = sizeof(uint16_t) * meshes[0].indices.size();
+        index_buffer.init(instance);
+        index_buffer.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        index_buffer.fill_memory(meshes[0].indices.data(), size);
+
+        printf("Vertex and index buffers created \n");
+    }
+
+    void destroy(){
+        vertex_buffer.destroy();
+        index_buffer.destroy();
+    }
+
+private:
 };
 
 
 
 
 
-
+/*
 class Model2{
 public:
 
@@ -48,3 +75,4 @@ public:
         4, 5, 6, 6, 7, 4,
     };
 };
+*/

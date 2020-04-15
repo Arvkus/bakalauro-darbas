@@ -10,7 +10,7 @@ int main2(){
 
     Loader loader = Loader();
     Model model = loader.load_glb("models/complex.glb");
-    out::print(model.meshes.size());
+    msg::print(model.meshes.size());
 
     std::cin.get();
     return 0;
@@ -43,7 +43,7 @@ void render_thread_function()
     }
     catch (const std::exception &e)
     {
-        out::printl("Render error: ", e.what());
+        msg::error("Render error: ", e.what());
         std::cin.get();
     }
 }
@@ -71,11 +71,11 @@ int main()
     {   
         uint64_t start = timestamp_milli();
         app.init_vulkan(window);
-        out::success(std::string("Load time: ") + std::to_string((float)(timestamp_milli() - start)/1000));
+        msg::success("Program load: SUCCESS (", (float)(timestamp_milli() - start)/1000,")");
     }
     catch (const std::exception &e)
     {
-        out::print("Initialisation error: ", e.what());
+        msg::error("Initialisation error: ", e.what());
         std::cin.get();
         return EXIT_FAILURE;
     }
@@ -96,6 +96,7 @@ int main()
     app.destroy();
     glfwDestroyWindow(window);
     glfwTerminate();
+    msg::success("Program exit!");
     std::cin.get();
     return EXIT_SUCCESS;
 
@@ -114,5 +115,6 @@ http://talpykla.elaba.lt/elaba-fedora/objects/elaba:1896427/datastreams/MAIN/con
 http://talpykla.elaba.lt/elaba-fedora/objects/elaba:1797456/datastreams/MAIN/content
 http://talpykla.elaba.lt/elaba-fedora/objects/elaba:1840488/datastreams/MAIN/content
 
+https://github.com/SaschaWillems/Vulkan/blob/master/examples/hdr/hdr.cpp
 vk_sharing_mode_
 */

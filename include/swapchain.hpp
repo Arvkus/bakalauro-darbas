@@ -1,16 +1,16 @@
 #include "common.hpp"
 #include "instance.hpp"
 #include "memory.hpp"
-#include "pipeline.hpp"
+// #include "pipeline.hpp"
 
 
 class Swapchain
 {
 public:
 
-    void init(Instance *instance, Pipeline *pipeline){
+    void init(Instance *instance, VkRenderPass *render_pass){
         this->instance = instance;
-        this->pipeline = pipeline;
+        this->render_pass = render_pass;
 
         create_depth_resources();
         create_swapchain();
@@ -119,7 +119,7 @@ public:
             std::array<VkImageView, 2> attachments = { this->swapchain_image_views[i], this->depth_image.image_view };
 
             VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-            framebufferInfo.renderPass = pipeline->render_pass;
+            framebufferInfo.renderPass = *render_pass;
             framebufferInfo.attachmentCount = (uint32_t)attachments.size();
             framebufferInfo.pAttachments = attachments.data();
             framebufferInfo.width = instance->surface.capabilities.currentExtent.width;
@@ -241,6 +241,6 @@ public:
 
 private:
     Instance *instance;
-    Pipeline *pipeline;
+    VkRenderPass *render_pass;
     VkCommandBuffer *command_buffers;
 };

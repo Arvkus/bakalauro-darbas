@@ -9,6 +9,22 @@
 #include "camera.hpp"
 #include "loader.hpp"
 
+/*
+- render model mesh children
+- render meshes with material
+- console output upgrades
+- multiple model rendering
+- hdr skybox shader
+- pbr materials
+- pbr shaders
+- ambient occlusion
+- multisampling
+
+http://www.hdrlabs.com/sibl/archive.html
+https://learnopengl.com/PBR/IBL/Diffuse-irradiance
+*/
+
+
 // global illumination -> ambient occlusion
 class Application{
 public:
@@ -27,20 +43,34 @@ public:
     }
 
     Model model;
+    Model skybox;
+
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
         this->descriptors.init(&this->instance);
-        this->pipeline.init(&this->instance, &this->descriptors);
-        this->swapchain.init(&this->instance, &this->pipeline);
+
+        this->render_pass = create_render_pass(&this->instance);
+        this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
+        this->pipeline.create_graphics_pipeline();
+
+        this->skybox_pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
+        this->skybox_pipeline.create_skybox_pipeline();
+
+        this->swapchain.init(&this->instance, &this->render_pass);
         
         Loader loader = Loader();
-        model = loader.load_glb("models/complex.glb");
+        skybox = loader.load_glb("models/cube.glb");
+        skybox.create_buffers(&this->instance);
 
-        create_model_buffers(model);
+        model = loader.load_glb("models/complex.glb");
+        model.create_buffers(&this->instance);
+
         create_image_buffers();
+        create_enviroment_buffer();
 
         this->descriptors.bind_diffuse_image(&this->texture_image);
+        this->descriptors.bind_enviroment_image(&this->enviroment_image);
         this->descriptors.create_descriptor_sets();
 
         create_command_pool();
@@ -65,8 +95,10 @@ public:
         // recreate objects
         
         this->descriptors.init(&this->instance);
-        this->pipeline.init(&this->instance, &this->descriptors);
-        this->swapchain.init(&this->instance, &this->pipeline);
+        this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
+        this->pipeline.create_graphics_pipeline();
+
+        this->swapchain.init(&this->instance, &this->render_pass);
 
         this->descriptors.bind_diffuse_image(&this->texture_image);
         this->descriptors.create_descriptor_sets();
@@ -85,8 +117,7 @@ public:
         this->descriptors.destroy();
         this->pipeline.destroy();
 
-        model_vertices.destroy();
-        model_indices.destroy();
+        model.destroy();
         texture_image.destroy();
 
         vkDestroyCommandPool(instance.device, command_pool, nullptr);
@@ -97,16 +128,18 @@ public:
 private:
     Instance instance;
     Pipeline pipeline; 
+    Pipeline skybox_pipeline;
     Descriptors descriptors;
     Swapchain swapchain;
+    VkRenderPass render_pass;
 
     Camera camera = Camera();
-    Buffer model_vertices;
-    Buffer model_indices;
+
 
     VkCommandPool command_pool;
     std::vector<VkCommandBuffer> command_buffers;
 
+    Image enviroment_image;
     Image texture_image;
 
     //---------------------------------------------------------------------------------
@@ -164,7 +197,7 @@ private:
         {
             // render pass info for recodring
             VkRenderPassBeginInfo render_pass_bi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-            render_pass_bi.renderPass = this->pipeline.render_pass;
+            render_pass_bi.renderPass = this->render_pass;
             render_pass_bi.framebuffer = this->swapchain.swapchain_framebuffers[i]; // framebuffer for each swap chain image that specifies it as color attachment.
             render_pass_bi.renderArea.offset = {0, 0}; // render area
             render_pass_bi.renderArea.extent = this->instance.surface.capabilities.currentExtent;
@@ -179,14 +212,34 @@ private:
             vkCmdBeginRenderPass(command_buffers[i], &render_pass_bi, VK_SUBPASS_CONTENTS_INLINE);
             // VK_SUBPASS_CONTENTS_INLINE - render pass commands will be embedded in the primary command buffer itself, no secondary buffers.
             // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - The render pass commands will be executed from secondary command buffers.
+            //------------------------------------------
+            
+            vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
+
+            VkBuffer vertex_buffers1[] = {skybox.vertex_buffer.buffer};
+            VkDeviceSize offsets1[] = {0};
+            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, vertex_buffers1, offsets1);
+            vkCmdBindIndexBuffer(command_buffers[i], skybox.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+
+            vkCmdBindDescriptorSets(
+                command_buffers[i], 
+                VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                skybox_pipeline.pipeline_layout, 0, 1, 
+                &descriptors.descriptor_sets[i], 
+                0, nullptr
+            );
+
+            vkCmdDrawIndexed(command_buffers[i], (uint32_t)skybox.meshes[0].indices.size(), 1, 0, 0, 0);
+
+            //------------------------------------------
 
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
             // VK_PIPELINE_BIND_POINT_GRAPHICS - specify if graphics or compute pipeline
 
-            VkBuffer vertex_buffers[] = {model_vertices.buffer};
+            VkBuffer vertex_buffers[] = {model.vertex_buffer.buffer};
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(command_buffers[i], 0, 1, vertex_buffers, offsets);
-            vkCmdBindIndexBuffer(command_buffers[i], model_indices.buffer, 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(command_buffers[i], model.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
 
             vkCmdBindDescriptorSets(
                 command_buffers[i], 
@@ -198,6 +251,8 @@ private:
 
             //vkCmdDraw(command_buffers[i], (uint32_t)model.vertices.size(), 1, 0, 0);
             vkCmdDrawIndexed(command_buffers[i], (uint32_t)model.meshes[0].indices.size(), 1, 0, 0, 0);
+
+
 
             vkCmdEndRenderPass(command_buffers[i]);
 
@@ -211,30 +266,12 @@ private:
         printf("Recorded commands \n");
     }
 
-    void create_model_buffers(const Model& model)
-    {
-        VkDeviceSize size;
-
-        size = sizeof(Vertex) * model.meshes[0].vertices.size();
-        model_vertices.init(&this->instance);
-        model_vertices.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        model_vertices.fill_memory(model.meshes[0].vertices.data(), size);
-
-        size = sizeof(uint16_t) * model.meshes[0].indices.size();
-        model_indices.init(&this->instance);
-        model_indices.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        model_indices.fill_memory(model.meshes[0].indices.data(), size);
-
-        printf("Vertex and index buffers created \n");
-    }
-
     void create_image_buffers()
     {
         // read image
-        int width, height, channel;
+        int width = 0, height = 0, channel = 0;
         stbi_uc* pixels = stbi_load("textures/image.jpg", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
-        VkDeviceSize memorySize = width * height *4;
 
         this->texture_image.init(&this->instance);
         this->texture_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -244,4 +281,35 @@ private:
 
         printf("Created texture \n");
     }
+
+    void create_enviroment_buffer()
+    {
+                // read image
+        int width = 0, height = 0, channel = 0;
+        stbi_uc* pixels = stbi_load("textures/image.jpg", &width, &height, &channel, STBI_rgb_alpha);
+        if(!pixels) throw std::runtime_error("failed to load texture image!");
+
+        this->texture_image.init(&this->instance);
+        this->texture_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        this->texture_image.fill_memory(width, height, pixels);
+        this->texture_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        stbi_image_free(pixels);
+
+
+        /*
+        int width = 0, height = 0, channel = 0; // 360 180 3
+        stbi_uc* pixels = stbi_load("textures/lake.hdr", &width, &height, &channel, 0);
+        if(!pixels) throw std::runtime_error("failed to load texture image!");
+        msg::printl(width, " ", height, " ", channel);
+
+        this->enviroment_image.init(&this->instance);
+        this->enviroment_image.create_cube_image(width, height, VK_FORMAT_BC2_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        this->enviroment_image.fill_cube_memory(width, height, pixels);
+        this->enviroment_image.create_cube_image_view(VK_FORMAT_BC2_UNORM_BLOCK);
+        stbi_image_free(pixels);
+        */
+        msg::printl("enviroment created");
+    }   
 };
+
+//https://github.com/SaschaWillems/Vulkan/blob/master/examples/texturecubemap/texturecubemap.cpp

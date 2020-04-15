@@ -31,9 +31,9 @@ public:
     glm::vec3 origin = glm::vec3(0,0,0);
 
     float speed = .1;
-    float distance = 3;
+    float distance = 4;
 
-    int yaw   = 0;
+    int yaw   = 45;
     int pitch = 45; 
     int roll  = 0;
 

@@ -142,7 +142,7 @@ bool is_validation_layers_supported()
 //-------------------------------------------------------------------
 // Console output functions
 
-namespace out{
+namespace msg{
 	enum Color{
 		Black=0,
 		Blue=1,
@@ -239,7 +239,7 @@ namespace out{
 		print(rest...) ;
 	}
 
-	//-------------------
+	//---------------------------------------
 
 	void printl(){ std::cout<<std::endl; }
 
@@ -254,42 +254,68 @@ namespace out{
 	void printl( const FIRST& first, const REST&... rest )
 	{
 		details::output(first);
-		printl(rest...) ;
+		print(rest...) ;
 		std::cout<<std::endl;
 	}
 
 	//---------------------------------------
-
-	void warn(const std::string& msg)
+	template< typename FIRST >
+	void warn( const FIRST& first)
 	{
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::Orange);
-		details::output(msg);
-		std::cout<<std::endl;
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
-	};
-
-	void error(const std::string& msg)
-	{
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::Red);
-		details::output(msg);
-		std::cout<<std::endl;
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
-	};
-
-	void success(const std::string& msg)
-	{
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::Green);
-		details::output(msg);
-		std::cout<<std::endl;
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::Orange);
+		printl(first);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
 	}
 
-	void highlight(const std::string& msg, out::Color color = out::Color::Yellow)
+	template< typename FIRST, typename... REST > 
+	void warn( const FIRST& first, const REST&... rest )
+	{
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::Orange);
+		print(first);
+		warn(rest...);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
+	};
+	//---------------------------------------
+	template< typename FIRST >
+	void error( const FIRST& first)
+	{
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::Red);
+		printl(first);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
+	}
+
+	template< typename FIRST, typename... REST > 
+	void error( const FIRST& first, const REST&... rest )
+	{
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::Red);
+		print(first);
+		error(rest...);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
+	};
+	//---------------------------------------
+	template< typename FIRST >
+	void success( const FIRST& first)
+	{
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::Green);
+		printl(first);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
+	}
+
+	template< typename FIRST, typename... REST > 
+	void success( const FIRST& first, const REST&... rest )
+	{
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::Green);
+		print(first);
+		success(rest...);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
+	};
+	//---------------------------------------
+	void highlight(const std::string& msg, msg::Color color = msg::Color::Yellow)
 	{
 		SetConsoleTextAttribute(H_CONSOLE, color);
 		details::output(msg);
 		std::cout<<std::endl;
-		SetConsoleTextAttribute(H_CONSOLE, out::Color::White);
+		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
 	}
 }
 
