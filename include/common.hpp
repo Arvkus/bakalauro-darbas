@@ -40,7 +40,7 @@
 //-----------------------------------------
 // Globals
 
-const bool APP_DEBUG = false;
+const bool APP_DEBUG = true;
 const char* TITLE = "Vulkan window";
 const int MAX_FRAMES_IN_FLIGHT = 2;
 bool APP_RUNNING = true;

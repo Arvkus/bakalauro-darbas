@@ -209,7 +209,7 @@ public:
 
     void fill_cube_memory(uint32_t width, uint32_t height, const void *source)
     {
-        VkDeviceSize size = width * height * 4; //.hdr - 32 bits per channel and 4 channels
+        VkDeviceSize size = width * height * 3; //.hdr - 32 bits per channel and 4 channels
         Buffer stage;
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);

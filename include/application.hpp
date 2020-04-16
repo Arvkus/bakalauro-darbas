@@ -64,13 +64,14 @@ public:
         skybox = loader.load_glb("models/skysphere.glb");
         skybox.create_buffers(&this->instance);
 
-        model = loader.load_glb("models/complex2.glb");
+        model = loader.load_glb("models/skybox.glb");
         model.create_buffers(&this->instance);
 
         //car = loader.load_glb("models/car.glb");
 
         create_image_buffers();
         create_enviroment_buffer();
+        hdr_test();
 
         this->descriptors.bind_diffuse_image(&this->texture_image);
         this->descriptors.bind_enviroment_image(&this->enviroment_image);
@@ -81,6 +82,31 @@ public:
 
         this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
+
+    Image hdr_img;
+    
+    void hdr_test()
+    {
+
+        int width = 0, height = 0, channel = 0; // 360 180 3
+        float* pixels = stbi_loadf("textures/test.hdr", &width, &height, &channel, 0);
+        if(!pixels) throw std::runtime_error("failed to load texture image!");
+        msg::printl(width, " ", height, " ", channel);
+
+        
+        this->hdr_img.init(&this->instance);
+        this->hdr_img.create_image(height, height, VK_FORMAT_R16_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        this->hdr_img.fill_memory(height, height, sizeof(float), pixels);
+        this->hdr_img.create_image_view(VK_FORMAT_R16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
+        
+        //this->hdr_img.init(&this->instance);
+        //this->hdr_img.create_cube_image(height, height, VK_FORMAT_BC2_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        //this->hdr_img.fill_cube_memory(height, height, pixels);
+        //this->hdr_img.create_cube_image_view(VK_FORMAT_BC2_UNORM_BLOCK);
+        
+        stbi_image_free(pixels);
+    }
+    
 
     void recreate_swapchain()
     {
