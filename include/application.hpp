@@ -64,10 +64,10 @@ public:
         skybox = loader.load_glb("models/skysphere.glb");
         skybox.create_buffers(&this->instance);
 
-        model = loader.load_glb("models/complex.glb");
+        model = loader.load_glb("models/complex2.glb");
         model.create_buffers(&this->instance);
 
-        car = loader.load_glb("models/car.glb");
+        //car = loader.load_glb("models/car.glb");
 
         create_image_buffers();
         create_enviroment_buffer();
@@ -164,7 +164,7 @@ private:
         UniformBufferObject ubo = {};
         ubo.model = glm::mat4(1.0);
         ubo.view = camera.cframe(); 
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 1000.0f);
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
         descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
@@ -224,40 +224,14 @@ private:
             //------------------------------------------
             
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
-            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &skybox.vertex_buffer.buffer, offsets);
-            vkCmdBindIndexBuffer(command_buffers[i], skybox.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-
-            vkCmdBindDescriptorSets(
-                command_buffers[i], 
-                VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                skybox_pipeline.pipeline_layout, 0, 1, 
-                &descriptors.descriptor_sets[i], 
-                0, nullptr
-            );
-
-            vkCmdDrawIndexed(command_buffers[i], (uint32_t)skybox.meshes[0].indices.size(), 1, 0, 0, 0);
+            skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors.descriptor_sets[i]);
 
             //------------------------------------------
-
+            
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
-            // VK_PIPELINE_BIND_POINT_GRAPHICS - specify if graphics or compute pipeline
+            model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors.descriptor_sets[i]);
 
-            vkCmdBindVertexBuffers(command_buffers[i], 0, 1, &model.vertex_buffer.buffer, offsets);
-            vkCmdBindIndexBuffer(command_buffers[i], model.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-
-            vkCmdBindDescriptorSets(
-                command_buffers[i], 
-                VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                pipeline.pipeline_layout, 0, 1, 
-                &descriptors.descriptor_sets[i], 
-                0, nullptr
-            );
-
-            //vkCmdDraw(command_buffers[i], (uint32_t)model.vertices.size(), 1, 0, 0);
-            vkCmdDrawIndexed(command_buffers[i], (uint32_t)model.meshes[0].indices.size(), 1, 0, 0, 0);
-
-
-
+            //------------------------------------------
             vkCmdEndRenderPass(command_buffers[i]);
 
             // RECORD END

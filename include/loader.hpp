@@ -90,10 +90,13 @@ private:
 
             // get mesh primitives
             // https://community.khronos.org/t/questions-about-multiple-primitives-per-mesh-in-gltf-file/104013/2
-
+            // PATIKRINTI INDEKSUS ??
+            
             json mesh =  content["meshes"][(int)node["mesh"]];
             for(json primitive : mesh["primitives"])
             {
+                Mesh primitive_mesh;
+
                 if(!is(primitive,"indices")) std::runtime_error("mesh doesn't have indices");
                 if(!is(primitive["attributes"],"NORMAL")) std::runtime_error("mesh doesn't have normals");
                 if(!is(primitive["attributes"],"POSITION")) std::runtime_error("mesh doesn't have positions");
@@ -135,20 +138,30 @@ private:
                 accessor_id = primitive["indices"];
                 accessor = content["accessors"][accessor_id];
                 offset = get_memory_offset(accessor);
-                model_mesh.indices.resize(accessor["count"]);
+                primitive_mesh.indices.resize(accessor["count"]);
                 
-                for(uint32_t i = 0; i < model_mesh.indices.size(); i++){
-                    std::memcpy(&model_mesh.indices[i], buffer.data() + offset + i*2, 2);
+                for(uint32_t i = 0; i < primitive_mesh.indices.size(); i++){
+                    std::memcpy(&primitive_mesh.indices[i], buffer.data() + offset + i*2, 2);
+                    //msg::print(model_mesh.indices[i], " ");
                 }
+                
                 //----------------------------------------------------------------
                 // construct vertices
                 if(positions.size() == normals.size() && normals.size() == texcoords.size()){
                     for(uint32_t i = 0; i < positions.size(); i++){
-                        model_mesh.vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
+                        primitive_mesh.vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
                     }
                 }else{
                     throw std::runtime_error("Vertex primitive data length is not equal.");
                 }
+                //----------------------------------------------------------------
+
+                primitive_mesh.translation = model_mesh.translation;
+                primitive_mesh.scale = model_mesh.scale;
+                primitive_mesh.rotation = model_mesh.rotation;
+
+                // primitive mesh
+                model_meshes.push_back(primitive_mesh);
             }
 
             // for(const Vertex& vertex : model_mesh.vertices)print(vertex.position, vertex.normal, vertex.texture, "\n");
@@ -156,6 +169,7 @@ private:
             // loop through all children recursively
             if(is(node,"children")) model_mesh.children = build_meshes(node["children"], depth+1);
             model_meshes.push_back(model_mesh);
+            
         }
         
         return model_meshes;

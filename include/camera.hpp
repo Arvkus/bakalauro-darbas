@@ -31,7 +31,7 @@ public:
     glm::vec3 origin = glm::vec3(0,0,0);
 
     float speed = .1;
-    float distance = 4;
+    float distance = 20;
 
     int yaw   = 45;
     int pitch = 45; 
