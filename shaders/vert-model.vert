@@ -21,6 +21,13 @@ void main() {
     outNormal = mat3(transpose(inverse(ubo.model))) * inNormal; // surface normal vector
     outPosition = vec3(ubo.model * vec4(inPosition, 1.0));  // model position
 
+    /*
+    mat3 rotation = mat3(ubo.model); // get only rotation
+    outNormal = rotation * outNormal; // rotate current normal
+    outNormal = normalize(outNormal); // get rid of scaling
+    */
+    
+
     mat4 m = inverse(ubo.view); // camera world space
     outViewPos = vec3(m[3][0], m[3][1], m[3][2]);
 

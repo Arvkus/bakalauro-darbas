@@ -17,7 +17,7 @@ layout(binding = 0) uniform UniformBufferObject {
 void main() {
     outUVW = inPosition;
     outTexcoord = inTexcoord;
-
+    //* rotationX(3.1415926/2) 
     mat4 viewPos = mat4(mat3(ubo.view));
     vec4 clipPos = ubo.proj * viewPos * vec4(inPosition.xyz, 1.0);
 

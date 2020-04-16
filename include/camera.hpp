@@ -9,16 +9,6 @@ private:
     // change position based on distance/origin/rotation
     glm::mat4 calculate_cframe(){ // TODO: broken
         glm::vec3 pos = glm::vec3(0.0);
-        
-        /*
-        pos1.x = sin(glm::radians((float)yaw));
-        pos1.y = cos(glm::radians((float)yaw));
-        pos1.z = 0;
-        
-        pos2.x = cos(glm::radians((float)pitch));
-        pos2.y = 0;
-        pos2.z = sin(glm::radians((float)pitch));
-        */
 
         pos.x = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
         pos.y = cos(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
@@ -31,7 +21,7 @@ public:
     glm::vec3 origin = glm::vec3(0,0,0);
 
     float speed = .1;
-    float distance = 20;
+    float distance = 10;
 
     int yaw   = 45;
     int pitch = 45; 

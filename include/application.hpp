@@ -64,17 +64,17 @@ public:
         skybox = loader.load_glb("models/skybox.glb");
         skybox.create_buffers(&this->instance);
 
-        model = loader.load_glb("models/skybox.glb");
+        model = loader.load_glb("models/car.glb");
         model.create_buffers(&this->instance);
 
         //car = loader.load_glb("models/car.glb");
 
         create_image_buffers();
         create_enviroment_buffer();
-        hdr_test();
+       // hdr_test();
 
         this->descriptors.bind_diffuse_image(&this->texture_image);
-        this->descriptors.bind_enviroment_image(&this->hdr_img);
+        this->descriptors.bind_enviroment_image(&this->enviroment_image);
         this->descriptors.create_descriptor_sets();
 
         create_command_pool();
@@ -289,16 +289,16 @@ private:
 
     void create_enviroment_buffer()
     {
-        int width = 0, height = 0, channel = 0; // 360 180 3
-        stbi_uc* pixels = stbi_load("textures/tonemaps/pond_bridge.jpg", &width, &height, &channel, STBI_rgb_alpha);
+        int width = 0, height = 0, channel = 0;
+        float* pixels = stbi_loadf("textures/pond.hdr", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
-        msg::printl(width, " ", height, " ", channel);
 
-        //  VK_FORMAT_R32G32B32A32_SFLOAT
+        // for (int i = 0; i < width*height; i++) pixels[i] *=255; 
+
         this->enviroment_image.init(&this->instance);
-        this->enviroment_image.create_image(width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        this->enviroment_image.fill_memory(width, height, 4, pixels);
-        this->enviroment_image.create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        this->enviroment_image.create_image(width, height, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        this->enviroment_image.fill_memory(width, height, 4*sizeof(float), pixels);
+        this->enviroment_image.create_image_view(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
         stbi_image_free(pixels);
         
         msg::printl("enviroment created");
