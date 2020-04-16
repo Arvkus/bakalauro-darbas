@@ -9,7 +9,7 @@ layout(location = 3) in vec3 inViewPos;
 layout(location = 0) out vec4 outColor;
 
 layout(binding = 1) uniform sampler2D colorSampler;
-layout(binding = 2) uniform sampler2D enviromentSampler;
+layout(binding = 2) uniform samplerCube enviromentSampler;
 
 
 
@@ -21,8 +21,8 @@ void main() {
     vec3 I = normalize(inPosition - inViewPos);
     vec3 R = reflect(I, normalize(inNormal));
 
-    float ratio = 0;
-    vec3 reflection_color = texture(enviromentSampler, vec2(R.y, -abs(R.z))).rgb * ratio;
+    float ratio = 1;
+    vec3 reflection_color = texture(enviromentSampler, R).rgb * ratio;
     vec3 diffuse_color = texture(colorSampler, inTexcoord).rgb * (1- ratio);
 
     outColor = vec4(reflection_color + diffuse_color, 1.0);

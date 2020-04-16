@@ -61,7 +61,7 @@ public:
         this->swapchain.init(&this->instance, &this->render_pass);
         
         Loader loader = Loader();
-        skybox = loader.load_glb("models/skysphere.glb");
+        skybox = loader.load_glb("models/skybox.glb");
         skybox.create_buffers(&this->instance);
 
         model = loader.load_glb("models/skybox.glb");
@@ -74,7 +74,7 @@ public:
         hdr_test();
 
         this->descriptors.bind_diffuse_image(&this->texture_image);
-        this->descriptors.bind_enviroment_image(&this->enviroment_image);
+        this->descriptors.bind_enviroment_image(&this->hdr_img);
         this->descriptors.create_descriptor_sets();
 
         create_command_pool();
@@ -89,20 +89,21 @@ public:
     {
 
         int width = 0, height = 0, channel = 0; // 360 180 3
-        float* pixels = stbi_loadf("textures/test.hdr", &width, &height, &channel, 0);
+        stbi_uc* pixels = stbi_load("textures/sky.jpg", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
         msg::printl(width, " ", height, " ", channel);
 
-        
+        /*
         this->hdr_img.init(&this->instance);
         this->hdr_img.create_image(height, height, VK_FORMAT_R16_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
         this->hdr_img.fill_memory(height, height, sizeof(float), pixels);
         this->hdr_img.create_image_view(VK_FORMAT_R16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
+        */
         
-        //this->hdr_img.init(&this->instance);
-        //this->hdr_img.create_cube_image(height, height, VK_FORMAT_BC2_UNORM_BLOCK, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        //this->hdr_img.fill_cube_memory(height, height, pixels);
-        //this->hdr_img.create_cube_image_view(VK_FORMAT_BC2_UNORM_BLOCK);
+        hdr_img.init(&this->instance);
+        hdr_img.create_cube_image(height, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        hdr_img.fill_cube_memory(height, height, 4, pixels);
+        hdr_img.create_cube_image_view(VK_FORMAT_R8G8B8A8_SRGB);
         
         stbi_image_free(pixels);
     }

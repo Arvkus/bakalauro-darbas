@@ -207,9 +207,9 @@ public:
         vkBindImageMemory(instance->device, this->image, this->memory, 0);
     }
 
-    void fill_cube_memory(uint32_t width, uint32_t height, const void *source)
+    void fill_cube_memory(uint32_t width, uint32_t height, uint32_t channel, const void *source)
     {
-        VkDeviceSize size = width * height * 3; //.hdr - 32 bits per channel and 4 channels
+        VkDeviceSize size = width * height * channel; //.hdr - 32 bits per channel and 4 channels
         Buffer stage;
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -227,7 +227,7 @@ public:
             bufferCopyRegion.imageSubresource.baseArrayLayer = face;
             bufferCopyRegion.imageSubresource.layerCount = 1;
             bufferCopyRegion.imageExtent = {width, height, 1};
-            bufferCopyRegion.bufferOffset = 0;
+            bufferCopyRegion.bufferOffset = offset;
             bufferCopyRegions.push_back(bufferCopyRegion);
 		}
 

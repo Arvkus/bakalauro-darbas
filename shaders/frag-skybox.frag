@@ -7,11 +7,11 @@ layout(location = 1) in vec2 fragTexcoord;
 layout(location = 0) out vec4 outColor;
 
 layout(binding = 1) uniform sampler2D texSampler;
-layout(binding = 2) uniform sampler2D enviromentSampler;
+layout(binding = 2) uniform samplerCube enviromentSampler;
 
 
 void main() {
-    vec3 color = texture(enviromentSampler, fragTexcoord).rgb;
+    vec3 color = texture(enviromentSampler, inUVW).rgb;
     outColor = vec4(color, 1.0);
 }
 

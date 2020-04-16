@@ -1,15 +1,14 @@
 
-# How to load hdr image file onto cubemap?
+# How to load hdr image file onto cubemap with Vulkan?
 
-I use std image library to get file contents
+Curently based on [Sascha Willems](https://github.com/SaschaWillems/Vulkan/blob/master/examples/texturecubemap/texturecubemap.cpp#L128) examples I've cerated `samplerCube` texture for fragment shader. It's same JPG image copied to all 6 layers.
+
+I have no idea what format to use and how to project HDR file image onto cubemap for for display.
+
+I use stbi image library:
+```cpp
 float* pixels = stbi_loadf("textures/test.hdr", &width, &height, &channel, 0);
-
-but I'm not sure where to go from here;
-
-
-
-
-
+```
 
 VK_FORMAT_BC2_UNORM_BLOCK - 
 
