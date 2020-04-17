@@ -64,7 +64,7 @@ public:
         skybox = loader.load_glb("models/skybox.glb");
         skybox.create_buffers(&this->instance);
 
-        model = loader.load_glb("models/car.glb");
+        model = loader.load_glb("models/complex.glb");
         model.create_buffers(&this->instance);
 
         //car = loader.load_glb("models/car.glb");
@@ -82,32 +82,6 @@ public:
 
         this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
-
-    Image hdr_img;
-    
-    void hdr_test()
-    {
-
-        int width = 0, height = 0, channel = 0; // 360 180 3
-        stbi_uc* pixels = stbi_load("textures/sky.jpg", &width, &height, &channel, STBI_rgb_alpha);
-        if(!pixels) throw std::runtime_error("failed to load texture image!");
-        msg::printl(width, " ", height, " ", channel);
-
-        /*
-        this->hdr_img.init(&this->instance);
-        this->hdr_img.create_image(height, height, VK_FORMAT_R16_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        this->hdr_img.fill_memory(height, height, sizeof(float), pixels);
-        this->hdr_img.create_image_view(VK_FORMAT_R16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
-        */
-        
-        hdr_img.init(&this->instance);
-        hdr_img.create_cube_image(height, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        hdr_img.fill_cube_memory(height, height, 4, pixels);
-        hdr_img.create_cube_image_view(VK_FORMAT_R8G8B8A8_SRGB);
-        
-        stbi_image_free(pixels);
-    }
-    
 
     void recreate_swapchain()
     {
@@ -191,6 +165,7 @@ private:
         UniformBufferObject ubo = {};
         ubo.model = glm::mat4(1.0);
         ubo.view = camera.cframe(); 
+
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 1000.0f);
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
@@ -239,9 +214,12 @@ private:
             render_pass_bi.pClearValues = clear_values.data();
 
             VkDeviceSize offsets[1] = {0};
+            uint32_t dynamic_offset = 0; //{0,0,0};
+            std::array<uint32_t, 4> offs = {0,0,0,0};
 
             VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
             vkBeginCommandBuffer(command_buffers[i], &begin_info);
+            
             
             // RECORD START
 
@@ -249,14 +227,28 @@ private:
             // VK_SUBPASS_CONTENTS_INLINE - render pass commands will be embedded in the primary command buffer itself, no secondary buffers.
             // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - The render pass commands will be executed from secondary command buffers.
             //------------------------------------------
-            
+            vkCmdBindDescriptorSets(
+                command_buffers[i], 
+                VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                pipeline.pipeline_layout, 
+                0, // first set
+                1, // descriptor set count
+                descriptors.descriptor_sets.data(),
+                3,
+                offs.data()
+            );
+
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
-            skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors.descriptor_sets[i]);
+            skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
             //------------------------------------------
+
+            
+
+
             
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
-            model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors.descriptor_sets[i]);
+            model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
             //------------------------------------------
             vkCmdEndRenderPass(command_buffers[i]);

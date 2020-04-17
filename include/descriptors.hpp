@@ -27,6 +27,7 @@ public:
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorPool descriptor_pool;
     std::vector<Buffer> uniform_buffers;
+    std::vector<Buffer> dynamic_uniform_buffers;
     std::vector<VkDescriptorSet> descriptor_sets;
 
     void bind_diffuse_image(Image *image){ diffuse = image; }
@@ -56,15 +57,20 @@ public:
             
             VkDescriptorImageInfo imageInfo = {};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = diffuse->image_view; //texture_image.image_view;
+            imageInfo.imageView = diffuse->image_view; 
             imageInfo.sampler = texture_sampler;
 
             VkDescriptorImageInfo enviromentInfo = {};
             enviromentInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            enviromentInfo.imageView = enviroment->image_view; //texture_image.image_view;
+            enviromentInfo.imageView = enviroment->image_view; 
             enviromentInfo.sampler = texture_sampler;
+
+            VkDescriptorBufferInfo materialInfo = {};
+            materialInfo.buffer = dynamic_uniform_buffers[i].buffer;
+            materialInfo.offset = 0;
+            materialInfo.range = sizeof(Material);
             
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites = {};
+            std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
 
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet = descriptor_sets[i];
@@ -89,8 +95,14 @@ public:
             descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[2].descriptorCount = 1;
             descriptorWrites[2].pImageInfo = &enviromentInfo;
-            
-            
+
+            descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].dstSet = descriptor_sets[i];
+            descriptorWrites[3].dstBinding = 3;
+            descriptorWrites[3].dstArrayElement = 0;
+            descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; // !dyn
+            descriptorWrites[3].descriptorCount = 1;
+            descriptorWrites[3].pBufferInfo = &materialInfo;
             
             vkUpdateDescriptorSets(instance->device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         }
@@ -144,13 +156,24 @@ private:
 
     void create_uniform_buffers(){
 
-        VkDeviceSize size = sizeof(UniformBufferObject);
+        VkDeviceSize size;
+        
+        size = sizeof(UniformBufferObject);
         uniform_buffers.resize(instance->surface.image_count);
 
         for (size_t i = 0; i < instance->surface.image_count; i++) 
         {
             uniform_buffers[i].init(this->instance);
             uniform_buffers[i].create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        }
+
+        size = sizeof(Material);
+        dynamic_uniform_buffers.resize(instance->surface.image_count);
+
+        for (size_t i = 0; i < instance->surface.image_count; i++) 
+        {
+            dynamic_uniform_buffers[i].init(this->instance);
+            dynamic_uniform_buffers[i].create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         }
 
         printf("created uniform buffers \n");
@@ -181,7 +204,19 @@ private:
         skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         
-        std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboLayoutBinding, samplerLayoutBinding, skyboxLayoutBinding };
+        VkDescriptorSetLayoutBinding dynamicMaterial = {};
+        dynamicMaterial.binding = 3;
+        dynamicMaterial.descriptorCount = 1;
+        dynamicMaterial.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; // !dyn
+        dynamicMaterial.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+       
+        
+        std::array<VkDescriptorSetLayoutBinding, 4> bindings = {
+            uboLayoutBinding, 
+            samplerLayoutBinding, 
+            skyboxLayoutBinding,
+            dynamicMaterial,
+        };
 
         VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         createInfo.bindingCount = (uint32_t)bindings.size();
@@ -190,16 +225,20 @@ private:
         if (vkCreateDescriptorSetLayout(this->instance->device, &createInfo, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor set layout!");
         }
+         printf("Created descriptor set layouts \n");
     }
 
-    void create_descriptor_pool(){
-        std::array<VkDescriptorPoolSize, 3> pool_sizes = {};
+    void create_descriptor_pool()
+    {
+        std::array<VkDescriptorPoolSize, 4> pool_sizes = {};
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[0].descriptorCount = (uint32_t)instance->surface.image_count;
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         pool_sizes[1].descriptorCount = (uint32_t)instance->surface.image_count;
         pool_sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         pool_sizes[2].descriptorCount = (uint32_t)instance->surface.image_count;
+        pool_sizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; // !dyn
+        pool_sizes[3].descriptorCount = (uint32_t)instance->surface.image_count;
 
         VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         poolInfo.poolSizeCount = (uint32_t)pool_sizes.size();

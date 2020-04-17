@@ -15,7 +15,7 @@ layout(binding = 2) uniform sampler2D enviromentSampler;
 vec2 SampleSphericalMap(vec3 v)
 {
     const vec2 invAtan = vec2(0.1591, 0.3183);
-    vec2 uv = vec2(atan(v.y, v.x), asin(-v.z));
+    vec2 uv = vec2(atan(v.y, v.x), -asin(v.z));
     uv *= invAtan;
     uv += 0.5;
     return uv;
@@ -30,12 +30,13 @@ void main() {
     vec3 I = normalize(inPosition - inViewPos);
     vec3 R = reflect(I, normalize(inNormal));
 
-    float ratio = 0;
-    vec3 reflection_color = texture(enviromentSampler, SampleSphericalMap(R)).rgb * ratio;
+    float ratio = 1;
+    vec2 uv = SampleSphericalMap(R);
+    vec3 reflection_color = texture(enviromentSampler, uv).rgb * ratio;
     vec3 diffuse_color = texture(colorSampler, inTexcoord).rgb * (1- ratio);
 
     const float gamma = 1;
-    const float exposure = 0.8;
+    const float exposure = 0.1;
   
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // Exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 
@@ -43,5 +44,5 @@ void main() {
     outColor = vec4(mapped + diffuse_color, 1.0);
 
 
-    outColor = vec4(abs(inNormal), 1.0);
+    //outColor = vec4(abs(inNormal), 1.0);
 }

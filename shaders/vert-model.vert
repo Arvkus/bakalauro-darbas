@@ -16,6 +16,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
 } ubo;
 
+
 void main() {
     outTexcoord = inTexcoord;
     outNormal = mat3(transpose(inverse(ubo.model))) * inNormal; // surface normal vector

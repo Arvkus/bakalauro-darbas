@@ -1,10 +1,10 @@
 #include "common.hpp"
-
+#include "descriptors.hpp"
 class Mesh{
 public:
     std::string name;
     std::vector<Vertex> vertices = {};
-    std::vector<uint16_t> indices = {};
+    std::vector<uint32_t> indices = {};
 
     glm::vec3 scale = glm::vec3(1);
     glm::vec3 translation = glm::vec3(0);
@@ -45,7 +45,7 @@ public:
             vertex_buffer.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             vertex_buffer.fill_memory(this->vertices.data(), size);
 
-            size = sizeof(uint16_t) * this->indices.size();
+            size = sizeof(uint32_t) * this->indices.size();
             index_buffer.init(instance);
             index_buffer.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             index_buffer.fill_memory(this->indices.data(), size);
@@ -62,19 +62,20 @@ public:
         index_buffer.destroy();
     }
 
-    void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, VkDescriptorSet *descriptor_set)
+    void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors)
     {
         // bindSet(layout, 0, set) for textures
         if(is_buffers_ready){
             VkDeviceSize offsets[1] = {0};
             vkCmdBindVertexBuffers(*cmd, 0, 1, &vertex_buffer.buffer, offsets);
-            vkCmdBindIndexBuffer(*cmd, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-            vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, descriptor_set, 0, nullptr);
+            vkCmdBindIndexBuffer(*cmd, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, 
+            &descriptors->descriptor_sets[0], 0, nullptr);
             vkCmdDrawIndexed(*cmd, (uint32_t)indices.size(), 1, 0, 0, 0);
         }
 
         for(Mesh& mesh : children){
-            mesh.draw(cmd, pipeline_layout, descriptor_set);
+            mesh.draw(cmd, pipeline_layout, descriptors);
         }
     }
 
@@ -101,10 +102,10 @@ public:
         }
     }
 
-    void draw(VkCommandBuffer *cmd, VkPipelineLayout *pipeline_layout, VkDescriptorSet *descriptor_set)
+    void draw(VkCommandBuffer *cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors)
     {
         for(Mesh& mesh: meshes){
-            mesh.draw(cmd, pipeline_layout, descriptor_set);
+            mesh.draw(cmd, pipeline_layout, descriptors);
         }
     }
 

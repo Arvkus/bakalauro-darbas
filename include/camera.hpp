@@ -21,10 +21,10 @@ public:
     glm::vec3 origin = glm::vec3(0,0,0);
 
     float speed = .1;
-    float distance = 10;
+    float distance = 15;
 
-    int yaw   = 45;
-    int pitch = 45; 
+    int yaw   = 0;
+    int pitch = 0; 
     int roll  = 0;
 
     //----------------------------------------------

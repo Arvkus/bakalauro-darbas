@@ -110,6 +110,23 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 proj;
 };
 
+struct Properties{
+
+};
+
+//VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+struct Material { // Dynamic!
+	alignas(16) glm::mat4 model;
+};
+
+// alignas(); // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout
+// scalar - byte size
+// vec2 - 8
+// vec3/4 - 16
+// mat4 - 16
+
+
+
 //-------------------------------------------------------------------
         
 bool is_validation_layers_supported()

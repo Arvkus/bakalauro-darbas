@@ -31,6 +31,7 @@ private:
 
         //-----------------------------------------------------
         uint32_t stride; // validate if data types are supported by this parser
+        //if(type == "VEC4"){ stride = 4 * 4; msg::error("vec4");} else  // float = 4 bytes, vec3 = 3 floats
         if(type == "VEC3") stride = 4 * 3; else  // float = 4 bytes, vec3 = 3 floats
         if(type == "VEC2") stride = 4 * 2; else
         if(type == "SCALAR"){ 
@@ -39,6 +40,7 @@ private:
             throw std::runtime_error("nknown accessor component type");
         }else throw std::runtime_error("unknown accessor type");
         //----------------------------------------------------
+
         return buffer_offset + accessor_offset;
     }
     
@@ -91,26 +93,28 @@ private:
             // get mesh primitives
             // https://community.khronos.org/t/questions-about-multiple-primitives-per-mesh-in-gltf-file/104013/2
             // PATIKRINTI INDEKSUS ??
-            
             json mesh =  content["meshes"][(int)node["mesh"]];
             for(json primitive : mesh["primitives"])
             {
                 Mesh primitive_mesh;
 
-                if(!is(primitive,"indices")) std::runtime_error("mesh doesn't have indices");
-                if(!is(primitive["attributes"],"NORMAL")) std::runtime_error("mesh doesn't have normals");
-                if(!is(primitive["attributes"],"POSITION")) std::runtime_error("mesh doesn't have positions");
-                if(!is(primitive["attributes"],"TEXCOORD_0")) std::runtime_error("mesh doesn't have texcoords");
+                if(!is(primitive,"indices")) throw std::runtime_error("mesh doesn't have indices");
+                if(!is(primitive["attributes"],"NORMAL")) throw std::runtime_error("mesh doesn't have normals");
+                if(!is(primitive["attributes"],"POSITION")) throw std::runtime_error("mesh doesn't have positions");
 
                 uint32_t accessor_id; 
                 uint32_t offset;
                 json accessor;
 
+                std::vector<glm::vec2> texcoords;
+                std::vector<glm::vec3> positions;
+                std::vector<glm::vec3> normals;
+         
                 //----------------------------------------------------------------
                 accessor_id = primitive["attributes"]["POSITION"];
                 accessor = content["accessors"][accessor_id];
                 offset = get_memory_offset(accessor);
-                std::vector<glm::vec3> positions(accessor["count"]);
+                positions.resize(accessor["count"]);
                 
                 for(uint32_t i = 0; i < positions.size(); i++){
                     std::memcpy(&positions[i], buffer.data() + offset + i*4*3, 4*3);
@@ -119,20 +123,26 @@ private:
                 accessor_id = primitive["attributes"]["NORMAL"];
                 accessor = content["accessors"][accessor_id];
                 offset = get_memory_offset(accessor);
-                std::vector<glm::vec3> normals(accessor["count"]);
+                normals.resize(accessor["count"]);
 
                 for(uint32_t i = 0; i < normals.size(); i++){
                     std::memcpy(&normals[i], buffer.data() + offset + i*4*3, 4*3);
                 }
 
                 //----------------------------------------------------------------
-                accessor_id = primitive["attributes"]["TEXCOORD_0"];
-                accessor = content["accessors"][accessor_id];
-                offset = get_memory_offset(accessor);
-                std::vector<glm::vec3> texcoords(accessor["count"]);
+                if(is(primitive["attributes"],"TEXCOORD_0")) // check if texcoords exist
+                {
+                    accessor_id = primitive["attributes"]["TEXCOORD_0"];
+                    accessor = content["accessors"][accessor_id];
+                    offset = get_memory_offset(accessor);
+                    texcoords.resize(accessor["count"]);
 
-                for(uint32_t i = 0; i < texcoords.size(); i++){
-                    std::memcpy(&texcoords[i], buffer.data() + offset + i*4*2, 4*2);
+                    for(uint32_t i = 0; i < texcoords.size(); i++){
+                        std::memcpy(&texcoords[i], buffer.data() + offset + i*4*2, 4*2);
+                    }
+                }else
+                {
+                    texcoords.resize(positions.size()); // resize base on positions
                 }
                 //----------------------------------------------------------------
                 accessor_id = primitive["indices"];
@@ -155,6 +165,13 @@ private:
                     throw std::runtime_error("Vertex primitive data length is not equal.");
                 }
                 //----------------------------------------------------------------
+                // materials
+                if(is(primitive,"material")){
+                    msg::printl("primitive with mat");
+                }
+
+                 //----------------------------------------------------------------
+
 
                 primitive_mesh.translation = model_mesh.translation;
                 primitive_mesh.scale = model_mesh.scale;
@@ -246,6 +263,8 @@ public:
 
             Model model;
             model.meshes = build_meshes(content["scenes"][0]["nodes"]);
+
+    
             model.name = path;
 
             msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
