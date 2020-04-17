@@ -8,8 +8,13 @@ layout(location = 3) in vec3 inViewPos;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 1) uniform sampler2D colorSampler;
-layout(binding = 2) uniform sampler2D enviromentSampler;
+layout(binding = 0) uniform Material {
+    float metalliness;
+} material;
+
+layout(binding = 2) uniform sampler2D colorSampler;
+layout(binding = 3) uniform sampler2D enviromentSampler;
+
 
 
 vec2 SampleSphericalMap(vec3 v)
@@ -30,13 +35,13 @@ void main() {
     vec3 I = normalize(inPosition - inViewPos);
     vec3 R = reflect(I, normalize(inNormal));
 
-    float ratio = 1;
+    float ratio = material.metalliness;
     vec2 uv = SampleSphericalMap(R);
     vec3 reflection_color = texture(enviromentSampler, uv).rgb * ratio;
     vec3 diffuse_color = texture(colorSampler, inTexcoord).rgb * (1- ratio);
 
     const float gamma = 1;
-    const float exposure = 0.1;
+    const float exposure = 0.3;
   
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // Exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 

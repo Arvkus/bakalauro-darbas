@@ -43,6 +43,7 @@
 const bool APP_DEBUG = true;
 const char* TITLE = "Vulkan window";
 const int MAX_FRAMES_IN_FLIGHT = 2;
+const uint32_t MAX_OBJECTS = 100;
 bool APP_RUNNING = true;
 bool RECREATE_SWAPCHAIN = false;
 HANDLE H_CONSOLE = GetStdHandle(STD_OUTPUT_HANDLE);

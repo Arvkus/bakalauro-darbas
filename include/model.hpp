@@ -1,10 +1,20 @@
 #include "common.hpp"
 #include "descriptors.hpp"
+
+class Primitive{
+    Material material;
+};
+
 class Mesh{
 public:
     std::string name;
+    uint32_t index = 0;
     std::vector<Vertex> vertices = {};
     std::vector<uint32_t> indices = {};
+
+    std::vector<Primitive> primitives;
+
+    Material material;
 
     glm::vec3 scale = glm::vec3(1);
     glm::vec3 translation = glm::vec3(0);
@@ -29,7 +39,6 @@ public:
 
     void create_buffers(Instance *instance, glm::mat4 offset)
     {
-        
         offset *= construct_matrix();
 
         if(!vertices.size() == 0 && !indices.size() == 0) {
@@ -56,6 +65,12 @@ public:
         }
         
     }
+
+    void create_material(Descriptors *descriptors)
+    {
+        msg::printl(material.roughness);
+        descriptors->dynamic_uniform_buffer.fill_memory(&material, sizeof(material), sizeof(material) * index);
+    }
         
     void destroy(){
         vertex_buffer.destroy();
@@ -64,13 +79,20 @@ public:
 
     void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors)
     {
+
+
+        // https://www.reddit.com/r/vulkan/comments/9a2z68/render_different_textures_for_different_models/
         // bindSet(layout, 0, set) for textures
+
         if(is_buffers_ready){
+            std::array<uint32_t, 1> dynamic_offsets = { index * 256 }; // (sizeof(Material) * index + 256 - 1) & ~(256 - 1) 
+            msg::printl(dynamic_offsets);
+
             VkDeviceSize offsets[1] = {0};
             vkCmdBindVertexBuffers(*cmd, 0, 1, &vertex_buffer.buffer, offsets);
             vkCmdBindIndexBuffer(*cmd, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
             vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, 
-            &descriptors->descriptor_sets[0], 0, nullptr);
+            &descriptors->descriptor_sets, 1, dynamic_offsets.data());
             vkCmdDrawIndexed(*cmd, (uint32_t)indices.size(), 1, 0, 0, 0);
         }
 
@@ -91,6 +113,13 @@ public:
 
 
     void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
+
+    void create_material(Descriptors *descriptors)
+    {
+        for(Mesh& mesh: meshes){
+            mesh.create_material(descriptors);
+        }
+    }
 
     void create_buffers(Instance *instance)
     {

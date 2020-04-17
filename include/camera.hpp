@@ -10,9 +10,11 @@ private:
     glm::mat4 calculate_cframe(){ // TODO: broken
         glm::vec3 pos = glm::vec3(0.0);
 
+
         pos.x = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
         pos.y = cos(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
         pos.z = sin(glm::radians((float)pitch));
+        
         
         return glm::lookAt(origin + pos*distance, origin, glm::vec3(0,0,1));
     }

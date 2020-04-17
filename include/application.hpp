@@ -33,6 +33,8 @@ public:
     {
         if(RECREATE_SWAPCHAIN) return; // do not render while swapchain is recreating
 
+        update_dynamic_buffer();
+
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
         if(!next_image.has_value()) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
 
@@ -63,9 +65,11 @@ public:
         Loader loader = Loader();
         skybox = loader.load_glb("models/skybox.glb");
         skybox.create_buffers(&this->instance);
+        skybox.create_material(&this->descriptors);
 
         model = loader.load_glb("models/complex.glb");
         model.create_buffers(&this->instance);
+        model.create_material(&this->descriptors);
 
         //car = loader.load_glb("models/car.glb");
 
@@ -151,6 +155,16 @@ private:
     Image texture_image;
 
     //---------------------------------------------------------------------------------
+    void update_dynamic_buffer()
+    {
+        std::array<Material, MAX_OBJECTS> materials;
+
+        for(uint32_t i = 0; i < MAX_OBJECTS; i++){
+            materials[i].roughness = 1.0;
+        }        
+
+        descriptors.dynamic_uniform_buffer.fill_memory(materials.data(), sizeof(materials));
+    }
 
     void update_uniform_buffer(uint32_t current_image)
     {
@@ -169,7 +183,7 @@ private:
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 1000.0f);
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
-        descriptors.uniform_buffers[current_image].fill_memory(&ubo, sizeof(ubo));
+        descriptors.uniform_buffer.fill_memory(&ubo, sizeof(ubo));
     }
 
     //---------------------------------------------------------------------------------
@@ -214,8 +228,12 @@ private:
             render_pass_bi.pClearValues = clear_values.data();
 
             VkDeviceSize offsets[1] = {0};
-            uint32_t dynamic_offset = 0; //{0,0,0};
-            std::array<uint32_t, 4> offs = {0,0,0,0};
+
+            uint32_t min_align = 256;
+            uint32_t dyn_align = sizeof(float);
+            dyn_align = (dyn_align + min_align - 1) & ~(min_align - 1);
+
+            
 
             VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
             vkBeginCommandBuffer(command_buffers[i], &begin_info);
@@ -227,27 +245,20 @@ private:
             // VK_SUBPASS_CONTENTS_INLINE - render pass commands will be embedded in the primary command buffer itself, no secondary buffers.
             // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - The render pass commands will be executed from secondary command buffers.
             //------------------------------------------
-            vkCmdBindDescriptorSets(
-                command_buffers[i], 
-                VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                pipeline.pipeline_layout, 
-                0, // first set
-                1, // descriptor set count
-                descriptors.descriptor_sets.data(),
-                3,
-                offs.data()
-            );
+            
+
+            
 
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
             skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
             //------------------------------------------
 
-            
-
 
             
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
+            
+
             model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
             //------------------------------------------

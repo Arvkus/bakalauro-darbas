@@ -256,6 +256,8 @@ private:
         VkPhysicalDeviceFeatures device_features = {}; // physical device features that are supported for logical device
         vkGetPhysicalDeviceFeatures(physical_device, &device_features);
 
+        msg::printl("minimum uniform alignment: ", device_properties.limits.minUniformBufferOffsetAlignment);
+
         printf("Selected: %s | %s | ",device_properties.deviceName, version_to_string(device_properties.apiVersion).c_str());
         switch(device_properties.deviceType){
             case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   printf("VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU \n"  ); break;
@@ -288,6 +290,8 @@ private:
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT = 0100,
             VK_MEMORY_PROPERTY_HOST_CACHED_BIT   = 10
         */
+
+       
 
        msg::printl(device_features.textureCompressionETC2, device_features.textureCompressionBC, device_features.textureCompressionASTC_LDR);
 

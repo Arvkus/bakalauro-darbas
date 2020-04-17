@@ -11,6 +11,7 @@ class Loader{
 private:
     json content; // json chunk
     std::vector<char> buffer; // binary chunk
+    uint32_t current_mesh_index;
 
     /// Check if json has value
     bool is(const json& node, const std::string& value){ return node.find(value) != node.end(); }
@@ -64,6 +65,8 @@ private:
             if(!is(node,"mesh")) continue; // node can be without mesh, skip nodes without mesh
 
             Mesh model_mesh = Mesh();
+            model_mesh.index = current_mesh_index;
+            current_mesh_index++;
 
             // get mesh metadata
             model_mesh.name = is(node,"name")? node["name"] : "null";
@@ -97,6 +100,8 @@ private:
             for(json primitive : mesh["primitives"])
             {
                 Mesh primitive_mesh;
+                primitive_mesh.index = current_mesh_index;
+                current_mesh_index++;
 
                 if(!is(primitive,"indices")) throw std::runtime_error("mesh doesn't have indices");
                 if(!is(primitive["attributes"],"NORMAL")) throw std::runtime_error("mesh doesn't have normals");
@@ -167,7 +172,11 @@ private:
                 //----------------------------------------------------------------
                 // materials
                 if(is(primitive,"material")){
-                    msg::printl("primitive with mat");
+                    msg::printl("yes mat");
+                    primitive_mesh.material.roughness = 1.0;
+                }else{
+                    msg::printl("no mat");
+                    primitive_mesh.material.roughness = 0.0;
                 }
 
                  //----------------------------------------------------------------
@@ -261,6 +270,7 @@ public:
             file.read(buffer.data(), chunk_length);
             file.close();
 
+            this->current_mesh_index = 0;
             Model model;
             model.meshes = build_meshes(content["scenes"][0]["nodes"]);
 

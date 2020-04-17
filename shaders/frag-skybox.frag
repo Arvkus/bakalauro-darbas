@@ -6,8 +6,12 @@ layout(location = 1) in vec2 fragTexcoord;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 1) uniform sampler2D texSampler;
-layout(binding = 2) uniform sampler2D enviromentSampler;
+layout(binding = 0) uniform Material {
+    float rougness;
+} material;
+
+layout(binding = 2) uniform sampler2D texSampler;
+layout(binding = 3) uniform sampler2D enviromentSampler;
 
 
 vec2 SampleSphericalMap(vec3 v)
@@ -24,7 +28,7 @@ void main() {
     vec3 color = texture(enviromentSampler, uv).rgb;
 
     const float gamma = 1;
-    const float exposure = 0.1;
+    const float exposure = 0.3;
   
     vec3 mapped = vec3(1.0) - exp(-color * exposure); // Exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 

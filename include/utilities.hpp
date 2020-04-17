@@ -111,16 +111,16 @@ struct UniformBufferObject {
 };
 
 struct Properties{
-
+	float exposure;
 };
 
-//VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
-struct Material { // Dynamic!
-	alignas(16) glm::mat4 model;
+struct Material { // Dynamic
+	float roughness;
+
 };
 
 // alignas(); // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout
-// scalar - byte size
+// scalar - byte size (uint16 2, uint32 4, float 4, double 8)
 // vec2 - 8
 // vec3/4 - 16
 // mat4 - 16

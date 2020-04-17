@@ -8,11 +8,13 @@ layout(location = 2) in vec2 inTexcoord;
 layout(location = 0) out vec3 outUVW;
 layout(location = 1) out vec2 outTexcoord;
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(binding = 1) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
 } ubo;
+
+
 
 void main() {
     outUVW = inPosition;
