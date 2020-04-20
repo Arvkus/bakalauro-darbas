@@ -3,8 +3,9 @@
 
 struct Material { // Dynamic
 	alignas(4) float roughness;
-	//alignas(4) float metalliness;
-	//alignas(16) glm::vec3 diffuse_color;
+    alignas(4) float metalliness;
+	alignas(4) float is_diffuse_color = 0;
+	alignas(16) glm::vec4 diffuse_color;
 };
 
 class Primitive{
@@ -82,15 +83,19 @@ public:
 
     void create_material(Descriptors *descriptors)
     {
-       for(uint32_t i = 0; i < primitives.size(); i++)
-       {
+        for(Mesh& mesh: children){
+            mesh.create_material(descriptors);
+        }
+
+        for(uint32_t i = 0; i < primitives.size(); i++)
+        {
             const Primitive& p = primitives[i];
             descriptors->dynamic_uniform_buffer.fill_memory(
-                &p.material.roughness,
-                sizeof(float), 
-                i*DYNAMIC_DESCRIPTOR_SIZE
+                &p.material,
+                sizeof(Material), 
+                p.primitive_index * DYNAMIC_DESCRIPTOR_SIZE
             );
-       }
+        }
     }
 
     void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors)
@@ -103,9 +108,9 @@ public:
         }
 
         for(Primitive& primitive : primitives){
-            std::array<uint32_t, 1> dynamic_offsets = { 0 };
+            std::array<uint32_t, 1> dynamic_offsets = { DYNAMIC_DESCRIPTOR_SIZE * primitive.primitive_index }; // 
 
-            VkDeviceSize offsets[1] = { 0 }; // DYNAMIC_DESCRIPTOR_SIZE * primitive.primitive_index
+            VkDeviceSize offsets[1] = { 0 }; 
             vkCmdBindVertexBuffers(*cmd, 0, 1, &primitive.vertex_buffer.buffer, offsets);
             vkCmdBindIndexBuffer(*cmd, primitive.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 

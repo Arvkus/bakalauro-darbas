@@ -65,11 +65,11 @@ public:
         Loader loader = Loader();
         skybox = loader.load_glb("models/skybox.glb");
         skybox.create_buffers(&this->instance);
-        //skybox.create_material(&this->descriptors);
+        skybox.create_material(&this->descriptors);
 
         model = loader.load_glb("models/complex.glb");
         model.create_buffers(&this->instance);
-        //model.create_material(&this->descriptors);
+        model.create_material(&this->descriptors);
         
 
         //car = loader.load_glb("models/car.glb");

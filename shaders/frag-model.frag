@@ -10,12 +10,13 @@ layout(location = 0) out vec4 outColor;
 
 layout(binding = 0) uniform Material {
     float roughness;
+    float metalliness;
+	float is_diffuse_color;
+	vec4 diffuse_color;
 } material;
 
 layout(binding = 2) uniform sampler2D colorSampler;
 layout(binding = 3) uniform sampler2D enviromentSampler;
-
-
 
 vec2 SampleSphericalMap(vec3 v)
 {
@@ -28,14 +29,10 @@ vec2 SampleSphericalMap(vec3 v)
 
 
 void main() {
-    //outColor = vec4(fragTexture, 0.0, 1.0);
-    //outColor = vec4(fragColor, 1.0);
-    //outColor = vec4(abs(fragColor) * texture(texSampler, fragTexture).rgb, 1.0);
-    
     vec3 I = normalize(inPosition - inViewPos);
     vec3 R = reflect(I, normalize(inNormal));
 
-    float ratio = 1.0; //  material.roughness;
+    float ratio = material.metalliness;
     vec2 uv = SampleSphericalMap(R);
     vec3 reflection_color = texture(enviromentSampler, uv).rgb * ratio;
     vec3 diffuse_color = texture(colorSampler, inTexcoord).rgb * (1- ratio);
@@ -47,7 +44,11 @@ void main() {
 
     // mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 
 
-    outColor = vec4(mapped + diffuse_color, 1.0);
+    if(material.is_diffuse_color == 1.0){
+        outColor = vec4(mapped*material.metalliness + material.diffuse_color.xyz*(1-material.metalliness), 1.0);
+    }else{
+        outColor = vec4(mapped + diffuse_color, 1.0);
+    }
 
 
     //outColor = vec4(abs(inNormal), 1.0);

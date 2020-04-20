@@ -175,12 +175,31 @@ private:
                 }
                 //----------------------------------------------------------------
                 // materials
-                if(is(primitive,"material")){
-                    gap(depth+1);
-                    msg::success("has meterial");
-                    po.material.roughness = 1.0;
-                }else{
-                    po.material.roughness = 0.0;
+                if(is(primitive,"material"))
+                {
+                    uint32_t material_id = primitive["material"];
+                    json material = content["materials"][material_id];
+                    gap(depth+1); msg::success(material["name"]);
+
+                    if(is(material,"pbrMetallicRoughness")){
+                        json pbr = material["pbrMetallicRoughness"];
+                        po.material.metalliness = pbr["metallicFactor"];
+                        po.material.roughness = pbr["roughnessFactor"];
+
+                        if(is(pbr,"baseColorFactor")){
+                            po.material.is_diffuse_color = 1.0;
+                            po.material.diffuse_color = glm::vec4(
+                                pbr["baseColorFactor"][0],
+                                pbr["baseColorFactor"][1],
+                                pbr["baseColorFactor"][2],
+                                pbr["baseColorFactor"][3]
+                            );  
+                        }
+                    }else{
+                        po.material.metalliness = 1.0;
+                        po.material.roughness = 1.0;
+                    }
+                    
                 }
                  //----------------------------------------------------------------
                 // primitive mesh
