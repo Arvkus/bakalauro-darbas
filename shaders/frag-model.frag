@@ -10,8 +10,6 @@ layout(location = 0) out vec4 outColor;
 
 layout(binding = 0) uniform Material {
     float roughness;
-	float metalliness;
-	vec3 diffuse_color;
 } material;
 
 layout(binding = 2) uniform sampler2D colorSampler;
@@ -37,7 +35,7 @@ void main() {
     vec3 I = normalize(inPosition - inViewPos);
     vec3 R = reflect(I, normalize(inNormal));
 
-    float ratio = 1.0;//material.roughness;
+    float ratio = 1.0; //  material.roughness;
     vec2 uv = SampleSphericalMap(R);
     vec3 reflection_color = texture(enviromentSampler, uv).rgb * ratio;
     vec3 diffuse_color = texture(colorSampler, inTexcoord).rgb * (1- ratio);

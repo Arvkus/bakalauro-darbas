@@ -114,12 +114,6 @@ struct Properties{
 	float exposure;
 };
 
-struct Material { // Dynamic
-	float roughness;
-	//alignas(4) float metalliness;
-	//alignas(16) glm::vec3 diffuse_color;
-};
-
 // alignas(); // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout
 // scalar - byte size (uint16 2, uint32 4, float 4, double 8)
 // vec2 - 8

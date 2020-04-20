@@ -50,7 +50,7 @@ public:
         VkDescriptorBufferInfo materialInfo = {};
         materialInfo.buffer = dynamic_uniform_buffer.buffer;
         materialInfo.offset = 0;
-        materialInfo.range = 256; // sizeof(Material);
+        materialInfo.range = DYNAMIC_DESCRIPTOR_SIZE; // sizeof(Material);
 
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer = uniform_buffer.buffer;
@@ -161,7 +161,7 @@ private:
         uniform_buffer.init(this->instance);
         uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     
-        size = 256 * MAX_OBJECTS; // sizeof(Material) 
+        size = DYNAMIC_DESCRIPTOR_SIZE * MAX_OBJECTS; // sizeof(Material) 
         dynamic_uniform_buffer.init(this->instance);
         dynamic_uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     

@@ -1,48 +1,25 @@
 #include "common.hpp"
 #include "descriptors.hpp"
 
-class Primitive{
-    Material material;
+struct Material { // Dynamic
+	alignas(4) float roughness;
+	//alignas(4) float metalliness;
+	//alignas(16) glm::vec3 diffuse_color;
 };
 
-class Mesh{
+class Primitive{
 public:
-    std::string name;
-    uint32_t index = 0;
+    Material material;
     std::vector<Vertex> vertices = {};
     std::vector<uint32_t> indices = {};
+    uint32_t primitive_index = 0;
 
-    std::vector<Primitive> primitives;
-
-    Material material;
-
-    glm::vec3 scale = glm::vec3(1);
-    glm::vec3 translation = glm::vec3(0);
-    glm::quat rotation = glm::quat(1,0,0,0);
-    glm::mat4 matrix;
-
-    std::vector<Mesh> children;
-
-    bool is_buffers_ready = false;
     Buffer vertex_buffer;
     Buffer index_buffer;
 
-    glm::mat4 construct_matrix(){
-        // translate, rotate, scale
-        glm::mat4 matrix = glm::mat4(1.0);
-        matrix = glm::translate(matrix, translation); // translate
-        matrix = matrix * glm::toMat4(rotation); // rotate
-        matrix = glm::scale(matrix, scale); // scale
-        this->matrix = matrix;
-        return matrix;
-    }
-
     void create_buffers(Instance *instance, glm::mat4 offset)
     {
-        offset *= construct_matrix();
-
-        if(!vertices.size() == 0 && !indices.size() == 0) {
-            is_buffers_ready = true;
+        if(vertices.size() != 0 && indices.size() != 0) {
             VkDeviceSize size;
             
             for(Vertex& vertex : vertices){
@@ -58,59 +35,83 @@ public:
             index_buffer.init(instance);
             index_buffer.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             index_buffer.fill_memory(this->indices.data(), size);
+        }else{
+            msg::error("empty buffer");
         }
-
-        for(Mesh& mesh : children){
-            mesh.create_buffers(instance, offset);
-        }
-        
     }
 
-    void create_material(Descriptors *descriptors)
-    {
-        /*
-        const int count = 100 * 256 / 4;
-        float *values = new float[count];
-        for(int i = 0; i < count; i++){
-            *(values + i) = 1.0;
-        }
-        */
-
-       msg::printl(index);
-        
-        for(int i = 0; i < 15; i++){
-            float val = 1.0/i;
-            descriptors->dynamic_uniform_buffer.fill_memory(&val, sizeof(val), i*256);
-        }
-
-
-    }
-        
     void destroy(){
         vertex_buffer.destroy();
         index_buffer.destroy();
     }
+};
+
+//---------------------------------------------------------------------------------------------------
+
+class Mesh{
+public:
+    std::string name;
+
+    std::vector<Primitive> primitives;
+    std::vector<Mesh> children;
+
+    glm::vec3 scale = glm::vec3(1);
+    glm::vec3 translation = glm::vec3(0);
+    glm::quat rotation = glm::quat(1,0,0,0);
+    glm::mat4 matrix;
+
+    glm::mat4 construct_matrix(){
+        // translate, rotate, scale
+        glm::mat4 matrix = glm::mat4(1.0);
+        matrix = glm::translate(matrix, translation); // translate
+        matrix = matrix * glm::toMat4(rotation); // rotate
+        matrix = glm::scale(matrix, scale); // scale
+        this->matrix = matrix;
+        return matrix;
+    }
+
+    void create_buffers(Instance *instance, glm::mat4 offset){
+        offset *= construct_matrix();
+        for(Mesh& mesh : children){
+            mesh.create_buffers(instance, offset);
+        }
+        for(Primitive& primitive : primitives){
+            primitive.create_buffers(instance, offset);
+        }
+    }
+
+    void create_material(Descriptors *descriptors)
+    {
+       for(uint32_t i = 0; i < primitives.size(); i++)
+       {
+            const Primitive& p = primitives[i];
+            descriptors->dynamic_uniform_buffer.fill_memory(
+                &p.material.roughness,
+                sizeof(float), 
+                i*DYNAMIC_DESCRIPTOR_SIZE
+            );
+       }
+    }
 
     void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors)
     {
-
-
         // https://www.reddit.com/r/vulkan/comments/9a2z68/render_different_textures_for_different_models/
         // bindSet(layout, 0, set) for textures
-
-        if(is_buffers_ready){
-            std::array<uint32_t, 1> dynamic_offsets = { 256 * index };
-
-            VkDeviceSize offsets[1] = {0};
-            vkCmdBindVertexBuffers(*cmd, 0, 1, &vertex_buffer.buffer, offsets);
-            vkCmdBindIndexBuffer(*cmd, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, 
-            &descriptors->descriptor_sets, 1, dynamic_offsets.data());
-            vkCmdDrawIndexed(*cmd, (uint32_t)indices.size(), 1, 0, 0, 0);
-        }
-
+        
         for(Mesh& mesh : children){
             mesh.draw(cmd, pipeline_layout, descriptors);
+        }
+
+        for(Primitive& primitive : primitives){
+            std::array<uint32_t, 1> dynamic_offsets = { 0 };
+
+            VkDeviceSize offsets[1] = { 0 }; // DYNAMIC_DESCRIPTOR_SIZE * primitive.primitive_index
+            vkCmdBindVertexBuffers(*cmd, 0, 1, &primitive.vertex_buffer.buffer, offsets);
+            vkCmdBindIndexBuffer(*cmd, primitive.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+            vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, 
+                &descriptors->descriptor_sets, 1, dynamic_offsets.data());
+            vkCmdDrawIndexed(*cmd, (uint32_t)primitive.indices.size(), 1, 0, 0, 0);
         }
     }
 
@@ -124,23 +125,12 @@ public:
     std::string name;
     std::vector<Mesh> meshes; 
 
-
     void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
-
-    void create_material(Descriptors *descriptors)
-    {
-        for(Mesh& mesh: meshes){
-            mesh.create_material(descriptors);
-        }
-    }
 
     void create_buffers(Instance *instance)
     {
-        uint32_t count = count_vertices(meshes);
-        //msg::error(count);
-
         for(Mesh& mesh: meshes){
-            mesh.create_buffers(instance, glm::mat4(1.0));
+             mesh.create_buffers(instance, glm::mat4(1.0));
         }
     }
 
@@ -151,6 +141,12 @@ public:
         }
     }
 
+    void create_material(Descriptors *descriptors){
+        for(Mesh& mesh: meshes){
+            mesh.create_material(descriptors);
+        }
+    }
+
     void destroy(){
 
     }
@@ -158,6 +154,7 @@ public:
 private:
 
     //------------------------------------------------------
+    /*
     uint32_t count_vertices(std::vector<Mesh>& meshes){
         uint32_t size = 0;
         for(Mesh& mesh : meshes){
@@ -175,6 +172,7 @@ private:
         }
         return size;
     }
+    */
 };
 
 

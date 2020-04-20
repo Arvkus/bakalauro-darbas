@@ -11,14 +11,15 @@ float test2 = 0.0;
 
 class Loader{
 private:
-
-    struct Hoolo{
-        float num;
-    } num;
-
     json content; // json chunk
     std::vector<char> buffer; // binary chunk
-    uint32_t current_mesh_index;
+    uint32_t primitive_index = 0;
+
+    struct MemoryInfo{ // get buffer binary data offset/size/stride  
+        uint32_t offset;
+        uint32_t stride;
+        uint32_t length;
+    };
 
     /// Check if json has value
     bool is(const json& node, const std::string& value){ return node.find(value) != node.end(); }
@@ -28,42 +29,41 @@ private:
     //----------------------------------------------------
     /// get primitive's all buffer bytes
     
-    uint32_t get_memory_offset(const json& accessor)
+    MemoryInfo get_memory_offset(const json& accessor)
     {
         std::string type = accessor["type"];
         uint32_t buffer_view_id = accessor["bufferView"];
         uint32_t accessor_offset = is(accessor,"byteOffset")? accessor["byteOffset"] : 0;
 
         json buffer_view = content["bufferViews"][buffer_view_id]; // byteOffset
+
         uint32_t buffer_offset = is(buffer_view, "byteOffset")? buffer_view["byteOffset"] : 0;
+        uint32_t buffer_length = is(buffer_view, "byteLength")? buffer_view["byteLength"] : 0;
+        uint32_t stride; // validate if data types are supported by this parser
 
         //-----------------------------------------------------
-        uint32_t stride; // validate if data types are supported by this parser
         //if(type == "VEC4"){ stride = 4 * 4; msg::error("vec4");} else  // float = 4 bytes, vec3 = 3 floats
         if(type == "VEC3") stride = 4 * 3; else  // float = 4 bytes, vec3 = 3 floats
         if(type == "VEC2") stride = 4 * 2; else
         if(type == "SCALAR"){ 
             if(accessor["componentType"] == 5123) stride = 2; else // unsignet short (2 bytes)
-            //if(accessor["componentType"] == 5125) stride = 4; else // unsigned int (4 bytes)
+            if(accessor["componentType"] == 5125) stride = 4; else // unsigned int (4 bytes)
             throw std::runtime_error("nuknown accessor component type");
         }else throw std::runtime_error("unknown accessor type");
         //----------------------------------------------------
 
-        return buffer_offset + accessor_offset;
+        MemoryInfo memory = {};
+        memory.offset = buffer_offset + accessor_offset;
+        memory.length = buffer_length;
+        memory.stride = stride;
+        return memory;
     }
     
-
-    //----------------------------------------------------
-
-    void validate_accessor(uint32_t attribute_id)
-    {
-        json attribute = content["accessors"][attribute_id];
-    }
-
     //----------------------------------------------------
     /// Scene is made out of `nodes`, each node can have more nodes as children
     std::vector<Mesh> build_meshes(const json& nodes, int depth = 0)
     {
+        
         std::vector<Mesh> model_meshes;
 
         for(uint32_t node_id: nodes)
@@ -72,10 +72,8 @@ private:
             if(!is(node,"mesh")) continue; // node can be without mesh, skip nodes without mesh
 
             Mesh model_mesh = Mesh();
-            model_mesh.index = current_mesh_index;
-            current_mesh_index++;
 
-            // get mesh metadata
+            // get mesh additional data !!!! node data not mesh
             model_mesh.name = is(node,"name")? node["name"] : "null";
 
             model_mesh.translation = is(node, "translation")? glm::vec3( 
@@ -97,25 +95,25 @@ private:
                 node["rotation"][2]
             ) : glm::quat(1,0,0,0);
 
-            gap(depth);
+            gap(depth); // debug output
             msg::highlight(model_mesh.name);
 
             // get mesh primitives
-            // https://community.khronos.org/t/questions-about-multiple-primitives-per-mesh-in-gltf-file/104013/2
-            // PATIKRINTI INDEKSUS ??
-            json mesh =  content["meshes"][(int)node["mesh"]];
+            json mesh = content["meshes"][(uint32_t)node["mesh"]];
             for(json primitive : mesh["primitives"])
             {
-                Mesh primitive_mesh;
-                primitive_mesh.index = current_mesh_index;
-                current_mesh_index++;
+                Primitive po; // primitive object
+                po.primitive_index = primitive_index;
+
+                gap(depth+1);
+                msg::printl("primitive ", primitive_index);
 
                 if(!is(primitive,"indices")) throw std::runtime_error("mesh doesn't have indices");
                 if(!is(primitive["attributes"],"NORMAL")) throw std::runtime_error("mesh doesn't have normals");
                 if(!is(primitive["attributes"],"POSITION")) throw std::runtime_error("mesh doesn't have positions");
 
                 uint32_t accessor_id; 
-                uint32_t offset;
+                MemoryInfo memory;
                 json accessor;
 
                 std::vector<glm::vec2> texcoords;
@@ -125,20 +123,20 @@ private:
                 //----------------------------------------------------------------
                 accessor_id = primitive["attributes"]["POSITION"];
                 accessor = content["accessors"][accessor_id];
-                offset = get_memory_offset(accessor);
+                memory = get_memory_offset(accessor);
                 positions.resize(accessor["count"]);
                 
                 for(uint32_t i = 0; i < positions.size(); i++){
-                    std::memcpy(&positions[i], buffer.data() + offset + i*4*3, 4*3);
+                    std::memcpy(&positions[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
                 }
                 //----------------------------------------------------------------
                 accessor_id = primitive["attributes"]["NORMAL"];
                 accessor = content["accessors"][accessor_id];
-                offset = get_memory_offset(accessor);
+                memory = get_memory_offset(accessor);
                 normals.resize(accessor["count"]);
 
                 for(uint32_t i = 0; i < normals.size(); i++){
-                    std::memcpy(&normals[i], buffer.data() + offset + i*4*3, 4*3);
+                    std::memcpy(&normals[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
                 }
 
                 //----------------------------------------------------------------
@@ -146,11 +144,11 @@ private:
                 {
                     accessor_id = primitive["attributes"]["TEXCOORD_0"];
                     accessor = content["accessors"][accessor_id];
-                    offset = get_memory_offset(accessor);
+                    memory = get_memory_offset(accessor);
                     texcoords.resize(accessor["count"]);
 
                     for(uint32_t i = 0; i < texcoords.size(); i++){
-                        std::memcpy(&texcoords[i], buffer.data() + offset + i*4*2, 4*2);
+                        std::memcpy(&texcoords[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
                     }
                 }else
                 {
@@ -159,18 +157,18 @@ private:
                 //----------------------------------------------------------------
                 accessor_id = primitive["indices"];
                 accessor = content["accessors"][accessor_id];
-                offset = get_memory_offset(accessor);
-                primitive_mesh.indices.resize(accessor["count"]);
-                
-                for(uint32_t i = 0; i < primitive_mesh.indices.size(); i++){
-                    std::memcpy(&primitive_mesh.indices[i], buffer.data() + offset + i*2, 2);
+                memory = get_memory_offset(accessor);
+                po.indices.resize(accessor["count"]);
+                for(uint32_t i = 0; i < po.indices.size(); i++){
+                    std::memcpy(&po.indices[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
                 }
+                
                 
                 //----------------------------------------------------------------
                 // construct vertices
                 if(positions.size() == normals.size() && normals.size() == texcoords.size()){
                     for(uint32_t i = 0; i < positions.size(); i++){
-                        primitive_mesh.vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
+                        po.vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
                     }
                 }else{
                     throw std::runtime_error("Vertex primitive data length is not equal.");
@@ -178,21 +176,16 @@ private:
                 //----------------------------------------------------------------
                 // materials
                 if(is(primitive,"material")){
-                    msg::printl("yes mat");
-                    primitive_mesh.material.roughness = 1.0;
+                    gap(depth+1);
+                    msg::success("has meterial");
+                    po.material.roughness = 1.0;
                 }else{
-                    msg::printl("no mat");
-                    primitive_mesh.material.roughness = 0.0;
+                    po.material.roughness = 0.0;
                 }
                  //----------------------------------------------------------------
-
-
-                primitive_mesh.translation = model_mesh.translation;
-                primitive_mesh.scale = model_mesh.scale;
-                primitive_mesh.rotation = model_mesh.rotation;
-
                 // primitive mesh
-                model_meshes.push_back(primitive_mesh);
+                model_mesh.primitives.push_back(po);
+                primitive_index++;
             }
 
             // for(const Vertex& vertex : model_mesh.vertices)print(vertex.position, vertex.normal, vertex.texture, "\n");
@@ -275,11 +268,9 @@ public:
             file.read(buffer.data(), chunk_length);
             file.close();
 
-            this->current_mesh_index = 0;
             Model model;
             model.meshes = build_meshes(content["scenes"][0]["nodes"]);
-
-    
+            primitive_index = 0;
             model.name = path;
 
             msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");

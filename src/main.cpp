@@ -8,14 +8,8 @@ GLFWwindow *window;
 
 int main2(){
 
-    struct{
-        alignas(4) float x;
-        alignas(8) float y;
-        alignas(16) float z;
-    } test;
-
-    msg::printl(sizeof(test));
-
+    Loader loader = Loader();
+    Model model = loader.load_glb("models/complex.glb");
     std::cin.get();
     return 0;
 }

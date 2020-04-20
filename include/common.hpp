@@ -40,10 +40,13 @@
 //-----------------------------------------
 // Globals
 
+const uint32_t MAX_OBJECTS = 32;
+const uint32_t MAX_IMAGE_SIZE = 1024; // 128 MB image memory required
+const uint32_t DYNAMIC_DESCRIPTOR_SIZE = 256;
+
 const bool APP_DEBUG = true;
 const char* TITLE = "Vulkan window";
 const int MAX_FRAMES_IN_FLIGHT = 2;
-const uint32_t MAX_OBJECTS = 100;
 bool APP_RUNNING = true;
 bool RECREATE_SWAPCHAIN = false;
 HANDLE H_CONSOLE = GetStdHandle(STD_OUTPUT_HANDLE);

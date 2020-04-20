@@ -65,11 +65,12 @@ public:
         Loader loader = Loader();
         skybox = loader.load_glb("models/skybox.glb");
         skybox.create_buffers(&this->instance);
-        skybox.create_material(&this->descriptors);
+        //skybox.create_material(&this->descriptors);
 
-        model = loader.load_glb("models/car.glb");
+        model = loader.load_glb("models/complex.glb");
         model.create_buffers(&this->instance);
-        model.create_material(&this->descriptors);
+        //model.create_material(&this->descriptors);
+        
 
         //car = loader.load_glb("models/car.glb");
 
@@ -248,19 +249,12 @@ private:
             // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - The render pass commands will be executed from secondary command buffers.
             //------------------------------------------
             
-
-            
-
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
             skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
             //------------------------------------------
 
-
-            
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
-            
-
             model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
             //------------------------------------------
