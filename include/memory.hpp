@@ -10,11 +10,12 @@ class MemoryObject
 {
 public:
     VkDeviceMemory memory;
-    Instance *instance;
+    
 
     void init(Instance *instance){ this->instance = instance; }
 
 protected:
+    Instance *instance;
 
     uint32_t find_memory_type(uint32_t typeBits, VkMemoryPropertyFlags requiredProperties) 
     {

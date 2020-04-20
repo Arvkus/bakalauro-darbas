@@ -8,9 +8,13 @@ GLFWwindow *window;
 
 int main2(){
 
-    Loader loader = Loader();
-    Model model = loader.load_glb("models/complex.glb");
-    msg::print(model.meshes.size());
+    struct{
+        alignas(4) float x;
+        alignas(8) float y;
+        alignas(16) float z;
+    } test;
+
+    msg::printl(sizeof(test));
 
     std::cin.get();
     return 0;
@@ -101,20 +105,12 @@ int main()
     return EXIT_SUCCESS;
 
 }
-
-/* Render loop:
-    1. process queue commands
-    2. execute input commands
-    3. render view
-*/
-
 /*
-http://talpykla.elaba.lt/elaba-fedora/objects/elaba:15129878/datastreams/MAIN/content
-http://talpykla.elaba.lt/elaba-fedora/objects/elaba:2170722/datastreams/MAIN/content
-http://talpykla.elaba.lt/elaba-fedora/objects/elaba:1896427/datastreams/MAIN/content
-http://talpykla.elaba.lt/elaba-fedora/objects/elaba:1797456/datastreams/MAIN/content
-http://talpykla.elaba.lt/elaba-fedora/objects/elaba:1840488/datastreams/MAIN/content
-
 https://github.com/SaschaWillems/Vulkan/blob/master/examples/hdr/hdr.cpp
 vk_sharing_mode_
+
+https://streamable.com/us243l
+shaderSampledImageArrayDynamicIndexing 
+vkCmdPushConstants()
+https://www.reddit.com/r/vulkan/comments/86tna1/question_about_descriptor_sets/
 */

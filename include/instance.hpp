@@ -112,6 +112,11 @@ private:
         ai.pApplicationName = TITLE;
         ai.apiVersion = VK_API_VERSION_1_1;
 
+        VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT};
+        VkValidationFeaturesEXT features = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+        features.enabledValidationFeatureCount = 2;
+        features.pEnabledValidationFeatures = enables;
+
         VkInstanceCreateInfo ci = {};
         ci.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         ci.pApplicationInfo = &ai;
@@ -119,6 +124,7 @@ private:
         ci.ppEnabledExtensionNames = glfw_extension_names;
         ci.enabledLayerCount = APP_DEBUG? (uint32_t)VALIDATION_LAYERS.size() : 0;
         ci.ppEnabledLayerNames = APP_DEBUG? VALIDATION_LAYERS.data(): nullptr;
+        ci.pNext = &features;
 
         if(vkCreateInstance(&ci, nullptr, &this->vulkan_instance) == VK_SUCCESS){
             printf("Created Vulkan instance \n");
@@ -256,7 +262,8 @@ private:
         VkPhysicalDeviceFeatures device_features = {}; // physical device features that are supported for logical device
         vkGetPhysicalDeviceFeatures(physical_device, &device_features);
 
-        msg::printl("minimum uniform alignment: ", device_properties.limits.minUniformBufferOffsetAlignment);
+        msg::printl("Minimum uniform alignment: ", device_properties.limits.minUniformBufferOffsetAlignment);
+        msg::printl("Memory allocation count: ", device_properties.limits.maxMemoryAllocationCount);
 
         printf("Selected: %s | %s | ",device_properties.deviceName, version_to_string(device_properties.apiVersion).c_str());
         switch(device_properties.deviceType){
@@ -307,7 +314,7 @@ private:
         vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, available_extensions.data());
 
         // what extensions device supports
-        // for(VkExtensionProperties &properties : availableExtensions) printf("%s\n", properties.extensionName);
+        //for(VkExtensionProperties &properties : available_extensions) printf("%s\n", properties.extensionName);
 
         bool is_supported = true;
         for(const char* required_extension_name : DEVICE_EXTENSIONS){

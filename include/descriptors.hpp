@@ -50,7 +50,7 @@ public:
         VkDescriptorBufferInfo materialInfo = {};
         materialInfo.buffer = dynamic_uniform_buffer.buffer;
         materialInfo.offset = 0;
-        materialInfo.range = sizeof(Material);
+        materialInfo.range = 256; // sizeof(Material);
 
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer = uniform_buffer.buffer;
@@ -91,7 +91,7 @@ public:
         descriptorWrites[2].dstBinding = 2;
         descriptorWrites[2].dstArrayElement = 0;
         descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].descriptorCount = 1; 
         descriptorWrites[2].pImageInfo = &imageInfo;
         
         descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -161,7 +161,7 @@ private:
         uniform_buffer.init(this->instance);
         uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     
-        size = 256 * MAX_OBJECTS; // sizeof(Material)
+        size = 256 * MAX_OBJECTS; // sizeof(Material) 
         dynamic_uniform_buffer.init(this->instance);
         dynamic_uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     
@@ -189,7 +189,7 @@ private:
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
         samplerLayoutBinding.binding = 2;
-        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.descriptorCount = 1; // array of images
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         

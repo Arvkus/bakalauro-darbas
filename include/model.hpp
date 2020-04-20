@@ -68,8 +68,22 @@ public:
 
     void create_material(Descriptors *descriptors)
     {
-        msg::printl(material.roughness);
-        descriptors->dynamic_uniform_buffer.fill_memory(&material, sizeof(material), sizeof(material) * index);
+        /*
+        const int count = 100 * 256 / 4;
+        float *values = new float[count];
+        for(int i = 0; i < count; i++){
+            *(values + i) = 1.0;
+        }
+        */
+
+       msg::printl(index);
+        
+        for(int i = 0; i < 15; i++){
+            float val = 1.0/i;
+            descriptors->dynamic_uniform_buffer.fill_memory(&val, sizeof(val), i*256);
+        }
+
+
     }
         
     void destroy(){
@@ -85,8 +99,7 @@ public:
         // bindSet(layout, 0, set) for textures
 
         if(is_buffers_ready){
-            std::array<uint32_t, 1> dynamic_offsets = { index * 256 }; // (sizeof(Material) * index + 256 - 1) & ~(256 - 1) 
-            msg::printl(dynamic_offsets);
+            std::array<uint32_t, 1> dynamic_offsets = { 256 * index };
 
             VkDeviceSize offsets[1] = {0};
             vkCmdBindVertexBuffers(*cmd, 0, 1, &vertex_buffer.buffer, offsets);

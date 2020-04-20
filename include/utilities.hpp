@@ -116,7 +116,8 @@ struct Properties{
 
 struct Material { // Dynamic
 	float roughness;
-
+	//alignas(4) float metalliness;
+	//alignas(16) glm::vec3 diffuse_color;
 };
 
 // alignas(); // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout
@@ -136,7 +137,14 @@ bool is_validation_layers_supported()
 
 	std::vector<VkLayerProperties> available_layers(layer_count);
 	vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
-
+	//e VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT
+	/*
+	for(const VkLayerProperties& layer_info : available_layers){
+		printf(layer_info.layerName);
+		std::cout<<std::endl;
+	}
+	*/
+	
 	for(const char* required_layer_name : VALIDATION_LAYERS){
 		bool layer_found = false;
 

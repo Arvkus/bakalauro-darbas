@@ -19,11 +19,13 @@ public:
         create_sync_objects();
     }
 
-    void destroy(){
+    void destroy()
+    {
         vkDestroySwapchainKHR(instance->device, vulkan_swapchain, nullptr);
 
         for(const VkFramebuffer& framebuffer : swapchain_framebuffers) vkDestroyFramebuffer(instance->device, framebuffer, nullptr);
         for(const VkImageView& image_view : swapchain_image_views) vkDestroyImageView(instance->device, image_view, nullptr);
+
         depth_image.destroy();
 
         for(const VkFence& fence : in_flight_fences) vkDestroyFence(instance->device, fence, nullptr);

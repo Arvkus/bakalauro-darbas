@@ -2,6 +2,8 @@
 #include "common.hpp"
 using json = nlohmann::json;
 
+float test1 = 1.0;
+float test2 = 0.0;
 // https://wiki.fileformat.com/3d/glb/
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#properties-reference
@@ -9,6 +11,11 @@ using json = nlohmann::json;
 
 class Loader{
 private:
+
+    struct Hoolo{
+        float num;
+    } num;
+
     json content; // json chunk
     std::vector<char> buffer; // binary chunk
     uint32_t current_mesh_index;
@@ -38,7 +45,7 @@ private:
         if(type == "SCALAR"){ 
             if(accessor["componentType"] == 5123) stride = 2; else // unsignet short (2 bytes)
             //if(accessor["componentType"] == 5125) stride = 4; else // unsigned int (4 bytes)
-            throw std::runtime_error("nknown accessor component type");
+            throw std::runtime_error("nuknown accessor component type");
         }else throw std::runtime_error("unknown accessor type");
         //----------------------------------------------------
 
@@ -157,7 +164,6 @@ private:
                 
                 for(uint32_t i = 0; i < primitive_mesh.indices.size(); i++){
                     std::memcpy(&primitive_mesh.indices[i], buffer.data() + offset + i*2, 2);
-                    //msg::print(model_mesh.indices[i], " ");
                 }
                 
                 //----------------------------------------------------------------
@@ -178,7 +184,6 @@ private:
                     msg::printl("no mat");
                     primitive_mesh.material.roughness = 0.0;
                 }
-
                  //----------------------------------------------------------------
 
 

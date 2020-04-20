@@ -67,7 +67,7 @@ public:
         skybox.create_buffers(&this->instance);
         skybox.create_material(&this->descriptors);
 
-        model = loader.load_glb("models/complex.glb");
+        model = loader.load_glb("models/car.glb");
         model.create_buffers(&this->instance);
         model.create_material(&this->descriptors);
 
@@ -157,6 +157,7 @@ private:
     //---------------------------------------------------------------------------------
     void update_dynamic_buffer()
     {
+        /*
         std::array<Material, MAX_OBJECTS> materials;
 
         for(uint32_t i = 0; i < MAX_OBJECTS; i++){
@@ -164,6 +165,7 @@ private:
         }        
 
         descriptors.dynamic_uniform_buffer.fill_memory(materials.data(), sizeof(materials));
+        */
     }
 
     void update_uniform_buffer(uint32_t current_image)
@@ -217,7 +219,7 @@ private:
         clear_values[1].depthStencil = {1.0, 0};
 
         for(int i = 0; i < command_buffers.size(); i++)
-        {
+        { 
             // render pass info for recodring
             VkRenderPassBeginInfo render_pass_bi = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
             render_pass_bi.renderPass = this->render_pass;

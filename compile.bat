@@ -4,12 +4,14 @@ rem https://stackoverflow.com/questions/39615/how-to-loop-through-files-matching
 
 FOR %%F in (shaders/*.vert) DO (
     echo Compiling: %%~nF
-    C:/VulkanSDK/1.2.131.2/Bin/glslc.exe shaders/%%~nF.vert -o bin/shaders/%%~nF.spv
+    C:/VulkanSDK/1.2.131.2/Bin/glslc.exe shaders/%%~nF.vert ^
+        -o bin/shaders/%%~nF.spv
 )
 
 FOR %%F in (shaders/*.frag) DO (
     echo Compiling: %%~nF
-    C:/VulkanSDK/1.2.131.2/Bin/glslc.exe shaders/%%~nF.frag -o bin/shaders/%%~nF.spv
+    C:/VulkanSDK/1.2.131.2/Bin/glslc.exe shaders/%%~nF.frag ^
+        -o bin/shaders/%%~nF.spv
 )
 
 
