@@ -2,10 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 inUVW;
-layout(location = 1) in vec2 fragTexcoord;
-
 layout(location = 0) out vec4 outColor;
-
 layout(binding = 0) uniform Material {
     float roughness;
 	float metallines;
@@ -19,7 +16,7 @@ layout(binding = 3) uniform sampler2D enviromentSampler;
 vec2 SampleSphericalMap(vec3 v)
 {
     const vec2 invAtan = vec2(0.1591, 0.3183);
-    vec2 uv = vec2(atan(v.y, v.x), -asin(v.z));
+    vec2 uv = vec2(atan(v.z, v.x), -asin(v.y)); // vec2(atan(v.y, v.x), -asin(v.z)); 
     uv *= invAtan;
     uv += 0.5;
     return uv;
@@ -37,15 +34,3 @@ void main() {
     
     outColor = vec4(mapped, 1.0);
 }
-
-
-/*
-void main() {
-    //outColor = vec4(fragTexture, 0.0, 1.0);
-    //outColor = vec4(fragColor, 1.0);
-    //outColor = vec4(abs(fragColor) * texture(texSampler, fragTexture).rgb, 1.0);
-
-    vec3 color = texture(enviromentSampler, inUVW).rgb;
-    outColor = vec4(color, 1.0);
-}
-*/

@@ -41,7 +41,7 @@ public:
 
         for(uint32_t i = 0; i < MAX_OBJECTS; i++){
             image_pool[i].init(this->instance);
-            image_pool[i].create_image(1024, 1024, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+            image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
             image_pool[i].fill_memory(width, height, 4, pixels);
             image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         }
@@ -198,7 +198,7 @@ private:
         dynamicMaterial.binding = 0;
         dynamicMaterial.descriptorCount = 1;
         dynamicMaterial.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; // !dyn
-        dynamicMaterial.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        dynamicMaterial.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
         VkDescriptorSetLayoutBinding uboLayoutBinding = {};
         uboLayoutBinding.binding = 1;

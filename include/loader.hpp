@@ -216,15 +216,18 @@ private:
                             uint32_t byte_offset = buffer_view["byteOffset"];
 
                             int width = 0, height = 0, channel = 0;
-                            po.pixels = stbi_load_from_memory( 
+                            stbi_uc* pixels = stbi_load_from_memory( 
                                 reinterpret_cast<const stbi_uc*>(buffer.data()) + byte_offset, 
                                 byte_length,
                                 &width, &height, &channel,
                                 STBI_rgb_alpha
                             );
-
-                            gap(depth+1);
-                            msg::printl(width, " ",height, " ", channel, " ");
+                            
+                            po.diffuse_pixels = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
+                                stbir_resize_uint8(pixels, width , height , 0,
+                                    po.diffuse_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
+                            
+                            stbi_image_free(pixels);
                         }
 
 

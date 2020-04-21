@@ -7,14 +7,15 @@ struct Material { // Dynamic
 	alignas(4) uint32_t is_diffuse_color = 0; // bool if there's texture
     alignas(4) uint32_t texture_id = 0; // bool if there's texture
 	alignas(16) glm::vec4 diffuse_color; // color if no texture
-    alignas(16) glm::mat4 transformation; // transform vertex based on model matrix
+    alignas(16) glm::mat4 model = glm::mat4(1.0);
 };
 
 class Primitive{
 public:
     Material material;
 
-    stbi_uc* pixels;
+    stbi_uc* diffuse_pixels = nullptr;
+    stbi_uc* orm_pixels = nullptr;
 
     std::vector<Vertex> vertices = {};
     std::vector<uint32_t> indices = {};
@@ -23,15 +24,11 @@ public:
     Buffer vertex_buffer;
     Buffer index_buffer;
     
-
-    void create_buffers(Instance *instance, glm::mat4 offset)
+    void create_buffers(Instance *instance)
     {
-        if(vertices.size() != 0 && indices.size() != 0) {
+        if(vertices.size() != 0 && indices.size() != 0) 
+        {
             VkDeviceSize size;
-            
-            for(Vertex& vertex : vertices){
-                vertex.position = offset * glm::vec4(vertex.position, 1.0);
-            }
 
             size = sizeof(Vertex) * this->vertices.size();
             vertex_buffer.init(instance);
@@ -45,6 +42,21 @@ public:
         }else{
             msg::error("empty buffer");
         }
+    }
+
+    void create_material(Descriptors *descriptors)
+    {
+        if(diffuse_pixels != nullptr)
+        {
+            VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+            descriptors->image_pool[primitive_index].destroy();
+            descriptors->image_pool[primitive_index].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+            descriptors->image_pool[primitive_index].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, this->diffuse_pixels);
+            descriptors->image_pool[primitive_index].create_image_view(format, VK_IMAGE_ASPECT_COLOR_BIT);
+            material.texture_id = primitive_index;
+            stbi_image_free(this->diffuse_pixels);
+        }
+        descriptors->dynamic_uniform_buffer.fill_memory(&this->material, sizeof(Material), primitive_index * DYNAMIC_DESCRIPTOR_SIZE);
     }
 
     void destroy(){
@@ -65,7 +77,6 @@ public:
     glm::vec3 scale = glm::vec3(1);
     glm::vec3 translation = glm::vec3(0);
     glm::quat rotation = glm::quat(1,0,0,0);
-    glm::mat4 matrix;
 
     glm::mat4 construct_matrix(){
         // translate, rotate, scale
@@ -73,34 +84,29 @@ public:
         matrix = glm::translate(matrix, translation); // translate
         matrix = matrix * glm::toMat4(rotation); // rotate
         matrix = glm::scale(matrix, scale); // scale
-        this->matrix = matrix;
         return matrix;
     }
 
-    void create_buffers(Instance *instance, glm::mat4 offset){
-        offset *= construct_matrix();
+    void create_buffers(Instance *instance)
+    {
         for(Mesh& mesh : children){
-            mesh.create_buffers(instance, offset);
+            mesh.create_buffers(instance);
         }
         for(Primitive& primitive : primitives){
-            primitive.create_buffers(instance, offset);
+            primitive.create_buffers(instance);
         }
     }
 
-    void create_material(Descriptors *descriptors)
-    {
-        for(Mesh& mesh: children){
-            mesh.create_material(descriptors);
-        }
+    void create_material(Descriptors *descriptors, glm::mat4 model_cframe)
+    {   
+        model_cframe *= construct_matrix();
 
-        for(uint32_t i = 0; i < primitives.size(); i++)
-        {
-            const Primitive& p = primitives[i];
-            descriptors->dynamic_uniform_buffer.fill_memory(
-                &p.material,
-                sizeof(Material), 
-                p.primitive_index * DYNAMIC_DESCRIPTOR_SIZE
-            );
+        for(Mesh& mesh: children){
+            mesh.create_material(descriptors, model_cframe);
+        }
+        for(Primitive& primitive : primitives){
+            primitive.material.model = model_cframe;
+            primitive.create_material(descriptors);
         }
     }
 
@@ -108,7 +114,7 @@ public:
     {
         // https://www.reddit.com/r/vulkan/comments/9a2z68/render_different_textures_for_different_models/
         // bindSet(layout, 0, set) for textures
-        
+
         for(Mesh& mesh : children){
             mesh.draw(cmd, pipeline_layout, descriptors);
         }
@@ -141,7 +147,7 @@ public:
     void create_buffers(Instance *instance)
     {
         for(Mesh& mesh: meshes){
-             mesh.create_buffers(instance, glm::mat4(1.0));
+             mesh.create_buffers(instance);
         }
     }
 
@@ -154,7 +160,8 @@ public:
 
     void create_material(Descriptors *descriptors){
         for(Mesh& mesh: meshes){
-            mesh.create_material(descriptors);
+            glm::mat4 model_cframe = glm::mat4(1.0);
+            mesh.create_material(descriptors, model_cframe);
         }
     }
 

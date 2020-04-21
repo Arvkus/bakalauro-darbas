@@ -6,7 +6,6 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexcoord;
 
 layout(location = 0) out vec3 outUVW;
-layout(location = 1) out vec2 outTexcoord;
 
 layout(binding = 1) uniform UniformBufferObject {
     mat4 model;
@@ -14,12 +13,9 @@ layout(binding = 1) uniform UniformBufferObject {
     mat4 proj;
 } ubo;
 
-
-
 void main() {
     outUVW = inPosition;
-    outTexcoord = inTexcoord;
-    //* rotationX(3.1415926/2) 
+
     mat4 viewPos = mat4(mat3(ubo.view));
     vec4 clipPos = ubo.proj * viewPos * vec4(inPosition.xyz, 1.0);
 

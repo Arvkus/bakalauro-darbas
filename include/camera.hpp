@@ -8,22 +8,20 @@ private:
 
     // change position based on distance/origin/rotation
     glm::mat4 calculate_cframe(){ // TODO: broken
-        glm::vec3 pos = glm::vec3(1.0);
+        glm::vec3 pos; // = glm::vec3(0,0,1);
 
-
-        pos.x = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
-        pos.y = cos(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
-        pos.z = sin(glm::radians((float)pitch));
+        pos.x = cos(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
+        pos.y = sin(glm::radians((float)pitch));
+        pos.z = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
         
-        
-        return glm::lookAt(origin + pos*distance, origin, glm::vec3(0,0,1));
+        return glm::lookAt(origin + pos*distance, origin, glm::vec3(0,1,0));
     }
 
 public:
     glm::vec3 origin = glm::vec3(0,0,0);
 
     float speed = .1;
-    float distance = 15;
+    float distance = 20;
 
     int yaw   = 0;
     int pitch = 0; 
@@ -61,6 +59,8 @@ public:
             if(pitch >  70) pitch =  70;
             if(pitch < -70) pitch = -70; 
         }
+
+        msg::printl(pitch, " : ", yaw);
 
         //-----------------------
         // zoom 

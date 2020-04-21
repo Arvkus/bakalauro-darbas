@@ -67,10 +67,9 @@ public:
         skybox.create_buffers(&this->instance);
         skybox.create_material(&this->descriptors);
 
-        model = loader.load_glb("models/complex.glb");
+        model = loader.load_glb("models/cube.glb");
         model.create_buffers(&this->instance);
         model.create_material(&this->descriptors);
-        
 
         //car = loader.load_glb("models/car.glb");
 
@@ -78,7 +77,7 @@ public:
         create_enviroment_buffer();
        // hdr_test();
 
-        this->descriptors.bind_diffuse_image(&this->texture_image);
+        //this->descriptors.bind_diffuse_image(&this->texture_image);
         this->descriptors.bind_enviroment_image(&this->enviroment_image);
         this->descriptors.create_descriptor_sets();
 
@@ -181,10 +180,11 @@ private:
 
         UniformBufferObject ubo = {};
         ubo.model = glm::mat4(1.0);
-        ubo.view = camera.cframe(); 
+        ubo.view = camera.cframe(); //glm::translate(glm::mat4(1.0), glm::vec3(0,0,-20));
 
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 1000.0f);
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
+
 
         descriptors.uniform_buffer.fill_memory(&ubo, sizeof(ubo));
     }

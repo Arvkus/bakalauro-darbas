@@ -10,27 +10,28 @@ layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outPosition;
 layout(location = 3) out vec3 outViewPos;
 
+layout(binding = 0) uniform Material {
+    float roughness;
+    float metalliness;
+	int is_diffuse_color;
+    int texture_id;
+	vec4 diffuse_color;
+    mat4 model; // model position
+} material;
+
 layout(binding = 1) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
 } ubo;
 
-
 void main() {
     outTexcoord = inTexcoord;
-    outNormal = mat3(transpose(inverse(ubo.model))) * inNormal; // surface normal vector
+    outNormal = mat3(material.model) * inNormal; // surface normal vector
     outPosition = vec3(ubo.model * vec4(inPosition, 1.0));  // model position
-
-    /*
-    mat3 rotation = mat3(ubo.model); // get only rotation
-    outNormal = rotation * outNormal; // rotate current normal
-    outNormal = normalize(outNormal); // get rid of scaling
-    */
-    
 
     mat4 m = inverse(ubo.view); // camera world space
     outViewPos = vec3(m[3][0], m[3][1], m[3][2]);
 
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
+    gl_Position = ubo.proj * ubo.view * material.model * vec4(inPosition, 1.0);
 }

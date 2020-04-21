@@ -8,8 +8,15 @@ GLFWwindow *window;
 
 int main2(){
 
-    Loader loader = Loader();
-    Model model = loader.load_glb("models/complex.glb");
+    int width = 0, height = 0, channel = 0;
+    stbi_uc* pixels = stbi_load("textures/image.jpg",&width, &height, &channel, STBI_rgb_alpha); 
+    msg::printl(width, " ",height, " ", channel, " ");
+
+    stbi_uc* output = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * channel);
+    stbir_resize_uint8(pixels, width , height , 0,
+        output, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, channel);
+    
+    stbi_image_free(pixels);
     std::cin.get();
     return 0;
 }
