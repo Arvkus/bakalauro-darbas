@@ -33,8 +33,6 @@ public:
     {
         if(RECREATE_SWAPCHAIN) return; // do not render while swapchain is recreating
 
-        update_dynamic_buffer();
-
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
         if(!next_image.has_value()) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
 
@@ -46,7 +44,6 @@ public:
 
     Model model;
     Model skybox;
-    Model car;
 
     void init_vulkan(GLFWwindow* window)
     {   
@@ -63,13 +60,16 @@ public:
         this->swapchain.init(&this->instance, &this->render_pass);
         
         Loader loader = Loader();
-        skybox = loader.load_glb("models/skybox.glb");
+        skybox = loader.load_glb("models/cube.glb");
         skybox.create_buffers(&this->instance);
         skybox.create_material(&this->descriptors);
 
-        model = loader.load_glb("models/cube.glb");
+        model = loader.load_glb("models/tests/lantern.glb");
         model.create_buffers(&this->instance);
         model.create_material(&this->descriptors);
+
+        msg::printl(model.min, model.max);
+        camera.set_region(model.min, model.max);
 
         //car = loader.load_glb("models/car.glb");
 
@@ -155,18 +155,6 @@ private:
     Image texture_image;
 
     //---------------------------------------------------------------------------------
-    void update_dynamic_buffer()
-    {
-        /*
-        std::array<Material, MAX_OBJECTS> materials;
-
-        for(uint32_t i = 0; i < MAX_OBJECTS; i++){
-            materials[i].roughness = 1.0;
-        }        
-
-        descriptors.dynamic_uniform_buffer.fill_memory(materials.data(), sizeof(materials));
-        */
-    }
 
     void update_uniform_buffer(uint32_t current_image)
     {

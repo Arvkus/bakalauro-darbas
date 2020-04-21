@@ -21,6 +21,7 @@ public:
     glm::vec3 origin = glm::vec3(0,0,0);
 
     float speed = .1;
+    float scroll_speed = 1;
     float distance = 20;
 
     int yaw   = 0;
@@ -30,6 +31,12 @@ public:
     //----------------------------------------------
 
     glm::mat4 cframe(){ return calculate_cframe(); }
+
+    void set_region(glm::vec3 min, glm::vec3 max)
+    {
+        distance = (max.length() + min.length()) / 2 ;
+        scroll_speed = distance/10;
+    }
     
     void move()
     {
@@ -60,11 +67,9 @@ public:
             if(pitch < -70) pitch = -70; 
         }
 
-        msg::printl(pitch, " : ", yaw);
-
         //-----------------------
         // zoom 
 
-        distance -= (distance - Input::Mouse::Wheel) <= 1.0? 0.0 : Input::Mouse::Wheel;
+        distance -= (distance - Input::Mouse::Wheel*scroll_speed) <= scroll_speed? 0.0 : Input::Mouse::Wheel*scroll_speed;
     }
 };

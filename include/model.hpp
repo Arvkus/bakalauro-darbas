@@ -132,6 +132,10 @@ public:
         }
     }
 
+    void destroy(){
+
+    }
+    
 private:
 
 };
@@ -141,6 +145,9 @@ class Model{
 public:
     std::string name;
     std::vector<Mesh> meshes; 
+
+    glm::vec3 min = glm::vec3(-1,-1,-1);
+    glm::vec3 max = glm::vec3( 1, 1, 1);
 
     void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
 
@@ -166,7 +173,9 @@ public:
     }
 
     void destroy(){
-
+        for(Mesh& mesh: meshes){
+            mesh.destroy();
+        }
     }
 
 private:

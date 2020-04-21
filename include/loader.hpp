@@ -15,6 +15,9 @@ private:
     std::vector<char> buffer; // binary chunk
     uint32_t primitive_index = 0;
 
+    glm::vec3 max = glm::vec3(0,0,0);
+    glm::vec3 min = glm::vec3(0,0,0);
+
     struct MemoryInfo{ // get buffer binary data offset/size/stride  
         uint32_t offset;
         uint32_t stride;
@@ -26,11 +29,31 @@ private:
     /// Print space 'n' amount of times
     void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
 
+    void find_min_max(const json& accessor)
+    {
+        if(is(accessor,"min")){
+            this->min = glm::vec3(
+                accessor["min"][0] < this->min.x? accessor["min"][0] : this->min.x,
+                accessor["min"][1] < this->min.y? accessor["min"][1] : this->min.y,
+                accessor["min"][2] < this->min.z? accessor["min"][2] : this->min.z
+            );
+        }
+
+        if(is(accessor,"max")){
+            this->max = glm::vec3(
+                accessor["max"][0] > this->max.x? accessor["max"][0] : this->max.x,
+                accessor["max"][1] > this->max.y? accessor["max"][1] : this->max.y,
+                accessor["max"][2] > this->max.z? accessor["max"][2] : this->max.z
+            );
+        }
+    }
+
     //----------------------------------------------------
     /// get primitive's all buffer bytes
     
     MemoryInfo get_memory_offset(const json& accessor)
     {
+        find_min_max(accessor);
         std::string type = accessor["type"];
         uint32_t buffer_view_id = accessor["bufferView"];
         uint32_t accessor_offset = is(accessor,"byteOffset")? accessor["byteOffset"] : 0;
@@ -63,14 +86,17 @@ private:
     /// Scene is made out of `nodes`, each node can have more nodes as children
     std::vector<Mesh> build_meshes(const json& nodes, int depth = 0)
     {
-        
         std::vector<Mesh> model_meshes;
 
         for(uint32_t node_id: nodes)
         {
+            
             json node = content["nodes"][node_id];
-            if(!is(node,"mesh")) continue; // node can be without mesh, skip nodes without mesh
 
+            if(!is(node,"mesh")){ // node can be without mesh, skip nodes without mesh
+                continue;
+            }; 
+        
             Mesh model_mesh = Mesh();
 
             // get mesh additional data !!!! node data not mesh
@@ -159,10 +185,10 @@ private:
                 accessor = content["accessors"][accessor_id];
                 memory = get_memory_offset(accessor);
                 po.indices.resize(accessor["count"]);
+
                 for(uint32_t i = 0; i < po.indices.size(); i++){
                     std::memcpy(&po.indices[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
                 }
-                
                 
                 //----------------------------------------------------------------
                 // construct vertices
@@ -213,7 +239,7 @@ private:
                             
                             json buffer_view = content["bufferViews"][(int)image["bufferView"]];
                             uint32_t byte_length = buffer_view["byteLength"];
-                            uint32_t byte_offset = buffer_view["byteOffset"];
+                            uint32_t byte_offset = is(buffer_view,"byteOffset")? buffer_view["byteOffset"] : 0;
 
                             int width = 0, height = 0, channel = 0;
                             stbi_uc* pixels = stbi_load_from_memory( 
@@ -228,6 +254,7 @@ private:
                                     po.diffuse_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
                             
                             stbi_image_free(pixels);
+                
                         }
 
 
@@ -235,6 +262,9 @@ private:
                         po.material.metalliness = 1.0;
                         po.material.roughness = 1.0;
                     }
+
+       
+
                     
                 }
                  //----------------------------------------------------------------
@@ -325,9 +355,14 @@ public:
 
             Model model;
             model.meshes = build_meshes(content["scenes"][0]["nodes"]);
-            primitive_index = 0;
             model.name = path;
+            model.min = this->min;
+            model.max = this->max;
 
+            this->primitive_index = 0;
+            this->max = glm::vec3(0,0,0);
+            this->min = glm::vec3(0,0,0);
+            
             msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
             return model;
         }catch(const json::exception& e){
