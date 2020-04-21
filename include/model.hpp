@@ -2,21 +2,27 @@
 #include "descriptors.hpp"
 
 struct Material { // Dynamic
-	alignas(4) float roughness;
-    alignas(4) float metalliness;
-	alignas(4) float is_diffuse_color = 0;
-	alignas(16) glm::vec4 diffuse_color;
+	alignas(4) float roughness = 1.0;
+    alignas(4) float metalliness = 1.0;
+	alignas(4) uint32_t is_diffuse_color = 0; // bool if there's texture
+    alignas(4) uint32_t texture_id = 0; // bool if there's texture
+	alignas(16) glm::vec4 diffuse_color; // color if no texture
+    alignas(16) glm::mat4 transformation; // transform vertex based on model matrix
 };
 
 class Primitive{
 public:
     Material material;
+
+    stbi_uc* pixels;
+
     std::vector<Vertex> vertices = {};
     std::vector<uint32_t> indices = {};
     uint32_t primitive_index = 0;
 
     Buffer vertex_buffer;
     Buffer index_buffer;
+    
 
     void create_buffers(Instance *instance, glm::mat4 offset)
     {

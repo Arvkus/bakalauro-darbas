@@ -183,11 +183,21 @@ private:
 
                     if(is(material,"pbrMetallicRoughness")){
                         json pbr = material["pbrMetallicRoughness"];
-                        po.material.metalliness = pbr["metallicFactor"];
-                        po.material.roughness = pbr["roughnessFactor"];
 
+                        if(is(pbr,"roughnessFactor")){
+                            po.material.roughness = pbr["roughnessFactor"];
+                        }else{
+                            // roughness texture
+                        }
+
+                        if(is(pbr,"metallicFactor")){
+                            po.material.metalliness = pbr["metallicFactor"];
+                        }else{
+                            // metalic texture
+                        }
+                        
                         if(is(pbr,"baseColorFactor")){
-                            po.material.is_diffuse_color = 1.0;
+                            po.material.is_diffuse_color = 1;
                             po.material.diffuse_color = glm::vec4(
                                 pbr["baseColorFactor"][0],
                                 pbr["baseColorFactor"][1],
@@ -195,6 +205,29 @@ private:
                                 pbr["baseColorFactor"][3]
                             );  
                         }
+
+                        if(is(pbr,"baseColorTexture")){
+                            uint32_t texture_index = pbr["baseColorTexture"]["index"];
+                            uint32_t source_index = content["textures"][texture_index]["source"];
+                            json image = content["images"][source_index];
+                            
+                            json buffer_view = content["bufferViews"][(int)image["bufferView"]];
+                            uint32_t byte_length = buffer_view["byteLength"];
+                            uint32_t byte_offset = buffer_view["byteOffset"];
+
+                            int width = 0, height = 0, channel = 0;
+                            po.pixels = stbi_load_from_memory( 
+                                reinterpret_cast<const stbi_uc*>(buffer.data()) + byte_offset, 
+                                byte_length,
+                                &width, &height, &channel,
+                                STBI_rgb_alpha
+                            );
+
+                            gap(depth+1);
+                            msg::printl(width, " ",height, " ", channel, " ");
+                        }
+
+
                     }else{
                         po.material.metalliness = 1.0;
                         po.material.roughness = 1.0;

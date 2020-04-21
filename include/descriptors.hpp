@@ -9,6 +9,7 @@ public:
     void init(Instance *instance){
         this->instance = instance;
         create_texture_sampler();
+        create_texture_array();
         create_uniform_buffers();
         create_descriptor_set_layout();
         create_descriptor_pool();
@@ -30,6 +31,23 @@ public:
     Buffer uniform_buffer;
     Buffer dynamic_uniform_buffer;
     VkDescriptorSet descriptor_sets;
+
+    std::array<Image, MAX_OBJECTS> image_pool;
+    void create_texture_array()
+    {
+        int width = 0, height = 0, channel = 0;
+        stbi_uc* pixels = stbi_load("textures/placeholder.png", &width, &height, &channel, STBI_rgb_alpha);
+        if(!pixels) throw std::runtime_error("failed to load texture image!");
+
+        for(uint32_t i = 0; i < MAX_OBJECTS; i++){
+            image_pool[i].init(this->instance);
+            image_pool[i].create_image(1024, 1024, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+            image_pool[i].fill_memory(width, height, 4, pixels);
+            image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        }
+
+        stbi_image_free(pixels);
+    }
 
     void bind_diffuse_image(Image *image){ diffuse = image; }
     void bind_enviroment_image(Image *image){ enviroment = image; }
@@ -57,16 +75,18 @@ public:
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
         
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = diffuse->image_view; 
-        imageInfo.sampler = texture_sampler;
+        VkDescriptorImageInfo imageInfos[MAX_OBJECTS];
+        for (uint32_t i = 0; i < MAX_OBJECTS; ++i)
+        {
+            imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfos[i].imageView = image_pool[i].image_view; // this->diffuse->image_view; //
+            imageInfos[i].sampler = texture_sampler;
+        }
 
         VkDescriptorImageInfo enviromentInfo = {};
         enviromentInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         enviromentInfo.imageView = enviroment->image_view; 
         enviromentInfo.sampler = texture_sampler;
-
 
         std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
 
@@ -91,8 +111,8 @@ public:
         descriptorWrites[2].dstBinding = 2;
         descriptorWrites[2].dstArrayElement = 0;
         descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[2].descriptorCount = 1; 
-        descriptorWrites[2].pImageInfo = &imageInfo;
+        descriptorWrites[2].descriptorCount = MAX_OBJECTS; 
+        descriptorWrites[2].pImageInfo = imageInfos;
         
         descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[3].dstSet = descriptor_sets;
@@ -101,7 +121,6 @@ public:
         descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[3].descriptorCount = 1;
         descriptorWrites[3].pImageInfo = &enviromentInfo;
-
         
         vkUpdateDescriptorSets(instance->device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         
@@ -189,7 +208,7 @@ private:
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
         samplerLayoutBinding.binding = 2;
-        samplerLayoutBinding.descriptorCount = 1; // array of images
+        samplerLayoutBinding.descriptorCount = MAX_OBJECTS; // array of images
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         

@@ -8,7 +8,7 @@ private:
 
     // change position based on distance/origin/rotation
     glm::mat4 calculate_cframe(){ // TODO: broken
-        glm::vec3 pos = glm::vec3(0.0);
+        glm::vec3 pos = glm::vec3(1.0);
 
 
         pos.x = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
