@@ -20,7 +20,7 @@ layout(binding = 0) uniform Material {
 layout(binding = 2) uniform sampler2D colorSampler[32];
 layout(binding = 3) uniform sampler2D enviromentSampler;
 
-vec2 SampleSphericalMap(vec3 v)
+vec2 sample_spherical_map(vec3 v)
 {
     const vec2 invAtan = vec2(0.1591, 0.3183);
     vec2 uv = vec2(atan(v.z, v.x), -asin(v.y));
@@ -29,17 +29,20 @@ vec2 SampleSphericalMap(vec3 v)
     return uv;
 }
 
- // proprties
-const float gamma = 1;
-const float exposure = 0.3;
-float metallic = material.metalliness;
-float roughness = material.roughness;
-
 void main() {
-    vec3 light_color = vec3(0.5,.2,.2); 
-    vec3 albedo = vec3(1.0, 1.0, 1.0); // object color
-    vec3 light_dir = normalize(inViewPos - inPosition); // light direction
-   
+    // proprties
+    float gamma = 1;
+    float exposure = 0.3;
+    
+    vec3 albedo = material.is_diffuse_color == 1? material.diffuse_color.xyz : texture(colorSampler[material.texture_id], inTexcoord).rgb;
+
+    vec3 light_color = vec3(0.6); 
+    vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
+    
+    float rough = material.roughness;
+    float metal = material.metalliness;
+
+    //-------------------------------
     // ambient color;
     vec3 ambient_color = light_color * 0.1;
     
@@ -48,19 +51,20 @@ void main() {
     vec3 diffuse_color = light_color * brightness;
 
     // specular color
+    float specular_str = 1.0 - rough;
     vec3 I = normalize(inViewPos - inPosition); // to what fragment camera is looking (direction)
     vec3 R = reflect(-light_dir, inNormal);
-    float spec = pow(max(dot(I, R), 0.0), 32);
-    vec3 specular_color = 1.0 * spec * vec3(1.0);  
+    float spec = pow(max(dot(I, R), 0.0), 64);
+    vec3 specular_color = specular_str * spec * vec3(1.0);  
 
     // reflect color
-    vec3 I1 = normalize(inPosition - inViewPos);
-    vec3 R2 = reflect(I, normalize(inNormal));
-    vec2 uv = SampleSphericalMap(R2);
+    vec2 uv = sample_spherical_map( reflect(-I, inNormal) );
     vec3 reflection_color = texture(enviromentSampler, uv).rgb;
-    vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // Exposure tone mapping
-    mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 
+    vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // exposure tone mapping
+    mapped = pow(mapped, vec3(1.0 / gamma)); // gamma correction 
 
-    vec3 result = mapped; //(ambient_color + diffuse_color + specular_color) * albedo;
+    // combined
+    vec3 color = (ambient_color + diffuse_color + specular_color) * albedo;
+    vec3 result = color * (1-metal) + mapped * (metal);
     outColor = vec4(result, 1.0);
 }

@@ -64,7 +64,7 @@ public:
         skybox.create_buffers(&this->instance);
         skybox.create_material(&this->descriptors);
 
-        model = loader.load_glb("models/triple.glb");
+        model = loader.load_glb("models/complex.glb");
         model.create_buffers(&this->instance);
         model.create_material(&this->descriptors);
 

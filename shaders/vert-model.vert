@@ -33,7 +33,7 @@ void main() {
 
     outTexcoord = inTexcoord;
 
-    outNormal = mat3(transpose(inverse(material.model))) * inNormal;  //vec3( mat3(m) * inNormal); // 
+    outNormal = mat3(material.model) * inNormal;  // transpose(inverse(material.model))
     outPosition = vec3( m * vec4(inPosition, 1.0) ); //vec3(m[3][0], m[3][1], m[3][2]);
     outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
 
