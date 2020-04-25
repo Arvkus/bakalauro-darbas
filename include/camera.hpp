@@ -34,7 +34,7 @@ public:
 
     void set_region(glm::vec3 min, glm::vec3 max)
     {
-        distance = (max.length() + min.length()) / 2 ;
+        distance = std::max(max.length(), min.length()) ;
         scroll_speed = distance/10;
     }
     
@@ -43,14 +43,14 @@ public:
         //------------------------
         // move origin
 
-        float x = sin(glm::radians((float)yaw));
-        float y = cos(glm::radians((float)yaw));
+        float x = cos(glm::radians((float)yaw));
+        float y = sin(glm::radians((float)yaw));
 
         this->origin.x -= x * (Input::Keys::W - Input::Keys::S)*speed;
-        this->origin.y -= y * (Input::Keys::W - Input::Keys::S)*speed;
+        this->origin.z -= y * (Input::Keys::W - Input::Keys::S)*speed;
 
-        this->origin.x += y * (Input::Keys::A - Input::Keys::D)*speed;
-        this->origin.y -= x * (Input::Keys::A - Input::Keys::D)*speed;
+        this->origin.x -= y * (Input::Keys::A - Input::Keys::D)*speed;
+        this->origin.z += x * (Input::Keys::A - Input::Keys::D)*speed;
 
         //-----------------------
         // rotate camera

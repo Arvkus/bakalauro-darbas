@@ -6,8 +6,55 @@
 Application app;
 GLFWwindow *window;
 
-int main2(){
+class Animal{
+public:
+    std::string name = "hohho";
+    virtual void sound(){
+        msg::printl("angry animal sounds");
+    }
+};
 
+class Dog : public Animal{
+public:
+    int age = 34;
+    void sound(){
+        msg::printl("bark");
+    }
+};
+
+int main2(int argc, char *argv[])
+{
+
+    std::vector<std::unique_ptr<Animal>> animals;
+    std::unique_ptr<Animal> anim(new Animal());
+
+
+    animals.push_back(std::move(anim));
+    animals.push_back(std::unique_ptr<Dog>(new Dog()));
+
+ 
+    
+    for(std::unique_ptr<Animal>& a : animals){
+        a->sound();
+    }
+    
+
+    /*
+    std::vector<std::unique_ptr<Animal>> animals;
+
+
+    animals.push_back(std::unique_ptr<Animal>(new Animal()));
+    animals.push_back(std::unique_ptr<Dog>(new Dog()));
+
+    
+    for(std::unique_ptr<Animal>& a : animals){
+        a->sound();
+    }
+    */
+    
+    
+
+    /*
     int width = 0, height = 0, channel = 0;
     stbi_uc* pixels = stbi_load("textures/image.jpg",&width, &height, &channel, STBI_rgb_alpha); 
     msg::printl(width, " ",height, " ", channel, " ");
@@ -15,8 +62,11 @@ int main2(){
     stbi_uc* output = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * channel);
     stbir_resize_uint8(pixels, width , height , 0,
         output, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, channel);
-    
-    stbi_image_free(pixels);
+         stbi_image_free(pixels);
+    */
+
+
+   
     std::cin.get();
     return 0;
 }
@@ -53,8 +103,15 @@ void render_thread_function()
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    msg::print("Program args: ");
+    for(uint32_t i = 0; i < argc; i++){
+        msg::print( *(argv + i));
+        if(std::strcmp(*(argv + i),"debug") == 0) APP_DEBUG = true;
+    } 
+    msg::printl();
+    
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // disable OpenGL
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);     // hide window while Vulkan initialises
@@ -114,4 +171,5 @@ https://streamable.com/us243l
 shaderSampledImageArrayDynamicIndexing 
 vkCmdPushConstants()
 https://www.reddit.com/r/vulkan/comments/86tna1/question_about_descriptor_sets/
+https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
 */

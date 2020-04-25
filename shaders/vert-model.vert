@@ -25,13 +25,17 @@ layout(binding = 1) uniform UniformBufferObject {
     mat4 proj;
 } ubo;
 
-void main() {
-    outTexcoord = inTexcoord;
-    outNormal = mat3(material.model) * inNormal; // surface normal vector
-    outPosition = vec3(ubo.model * vec4(inPosition, 1.0));  // model position
+vec3 center  = vec3(0.0);
 
-    mat4 m = inverse(ubo.view); // camera world space
-    outViewPos = vec3(m[3][0], m[3][1], m[3][2]);
+void main() {
+    mat4 v = inverse(ubo.view); // camera world space
+    mat4 m = material.model; // model world space
+
+    outTexcoord = inTexcoord;
+
+    outNormal = mat3(transpose(inverse(material.model))) * inNormal;  //vec3( mat3(m) * inNormal); // 
+    outPosition = vec3( m * vec4(inPosition, 1.0) ); //vec3(m[3][0], m[3][1], m[3][2]);
+    outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
 
     gl_Position = ubo.proj * ubo.view * material.model * vec4(inPosition, 1.0);
 }

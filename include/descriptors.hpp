@@ -39,10 +39,11 @@ public:
         stbi_uc* pixels = stbi_load("textures/placeholder.png", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
 
+
         for(uint32_t i = 0; i < MAX_OBJECTS; i++){
             image_pool[i].init(this->instance);
             image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-            image_pool[i].fill_memory(width, height, 4, pixels);
+            image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, pixels);
             image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         }
 
@@ -61,7 +62,9 @@ public:
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &descriptor_set_layout;
 
-        if (vkAllocateDescriptorSets(instance->device, &allocInfo, &descriptor_sets) != VK_SUCCESS) {
+        VkResult result = vkAllocateDescriptorSets(instance->device, &allocInfo, &descriptor_sets);
+        if (result != VK_SUCCESS) {
+            msg::error(result);
             throw std::runtime_error("failed to allocate descriptor sets!");
         }
 

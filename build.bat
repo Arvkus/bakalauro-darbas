@@ -7,9 +7,9 @@ if exist "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxi
 
 call compile.bat
 
-set compilerflags=/Od /Zi /EHsc /std:c++17 /I include /I dependencies 
+set compilerflags=/Od /EHsc /std:c++17 /I include /I dependencies
 set linkerflags=/OUT:bin\main.exe lib\glfw3dll.lib lib\vulkan-1.lib
-cl.exe %compilerflags% src\* /link %linkerflags%
+cl.exe %compilerflags% src\* /link %linkerflags% 
 del bin\*.ilk *.obj *.pdb
 del bin\*.pdb
 

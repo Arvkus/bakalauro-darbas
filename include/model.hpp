@@ -100,6 +100,7 @@ public:
     void create_material(Descriptors *descriptors, glm::mat4 model_cframe)
     {   
         model_cframe *= construct_matrix();
+        msg::printl(model_cframe);
 
         for(Mesh& mesh: children){
             mesh.create_material(descriptors, model_cframe);

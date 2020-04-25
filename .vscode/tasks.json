@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build C++ project",
+            "label": "Build",
             "type": "shell",
             "group": {
                 "kind": "build",
@@ -10,14 +10,6 @@
             },
             "command": ".\\build.bat"
         },
-        {
-            "label": "Build & run C++ project",
-            "type": "shell",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            },
-            "command": ".\\build.bat && .\\bin\\main.exe"
-        }
+
     ]
 }

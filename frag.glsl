@@ -23,7 +23,7 @@ layout(binding = 3) uniform sampler2D enviromentSampler;
 vec2 SampleSphericalMap(vec3 v)
 {
     const vec2 invAtan = vec2(0.1591, 0.3183);
-    vec2 uv = vec2(atan(v.y, v.x), -asin(v.z));
+    vec2 uv = vec2(atan(v.z, v.x), -asin(v.y));
     uv *= invAtan;
     uv += 0.5;
     return uv;
@@ -38,8 +38,11 @@ float roughness = material.roughness;
 void main() {
     vec3 I = normalize(inPosition - inViewPos);
     vec3 R = reflect(I, normalize(inNormal));
+    vec3 light_dir = -I;
 
-    vec3 light_dir = normalize(inViewPos);
+    // specular color
+    float spec = pow(max(dot(light_dir, R), 0.0), 256);
+    vec3 specular_color = .5 * spec * vec3(1.0, 1.0, 1.0);  
 
     // surface color
     vec3 albedo = material.is_diffuse_color == 1? material.diffuse_color.xyz : texture(colorSampler[material.texture_id], inTexcoord).rgb;
@@ -50,10 +53,13 @@ void main() {
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // Exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 
 
-    // light brightness
+    // diffuse color
     float brightness = max(dot(inNormal, light_dir), 0.0);
+    vec3 diffuse_color = albedo * brightness;
+    vec3 ambient_color = vec3(1.0, 1.0, 1.0) * 0.1;
 
+    //outColor = vec4(mapped, 1.0);
 
-    outColor = vec4(mapped, 1.0);
-    //outColor = vec4(albedo * brightness, 1.0);
+    vec3 result = specular_color; //(ambient_color + diffuse_color + specular_color) * albedo;
+    outColor = vec4(result, 1.0);
 }
