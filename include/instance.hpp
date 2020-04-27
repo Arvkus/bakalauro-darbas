@@ -264,6 +264,7 @@ private:
 
         msg::printl("Minimum uniform alignment: ", device_properties.limits.minUniformBufferOffsetAlignment);
         msg::printl("Memory allocation count: ", device_properties.limits.maxMemoryAllocationCount);
+        msg::printl("Maximum descriptor image array size: ", device_properties.limits.maxPerStageDescriptorSampledImages);
 
         printf("Selected: %s | %s | ",device_properties.deviceName, version_to_string(device_properties.apiVersion).c_str());
         switch(device_properties.deviceType){

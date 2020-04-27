@@ -9,6 +9,9 @@ namespace Input
         bool W = false;
         bool S = false;
         bool D = false;
+        bool L = false;
+        bool Minus = false;
+        bool Equal = false;
     }
 
     namespace Mouse
@@ -49,17 +52,38 @@ namespace Input
 
     void key_press_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        if(action == GLFW_PRESS){
+        if(action == GLFW_PRESS)
+        {
+            if(key == GLFW_KEY_UP) Input::Keys::W = true;
+            if(key == GLFW_KEY_LEFT) Input::Keys::A = true;
+            if(key == GLFW_KEY_DOWN) Input::Keys::S = true;
+            if(key == GLFW_KEY_RIGHT) Input::Keys::D = true;
+
             if(key == GLFW_KEY_W) Input::Keys::W = true;
             if(key == GLFW_KEY_A) Input::Keys::A = true;
             if(key == GLFW_KEY_S) Input::Keys::S = true;
             if(key == GLFW_KEY_D) Input::Keys::D = true;
+            if(key == GLFW_KEY_L) Input::Keys::L = true;
+
+            if(key == GLFW_KEY_MINUS) Input::Keys::Minus = true;
+            if(key == GLFW_KEY_EQUAL) Input::Keys::Equal = true;
         }
-        if(action == GLFW_RELEASE){
+
+        if(action == GLFW_RELEASE)
+        {
+            if(key == GLFW_KEY_UP) Input::Keys::W = false;
+            if(key == GLFW_KEY_LEFT) Input::Keys::A = false;
+            if(key == GLFW_KEY_DOWN) Input::Keys::S = false;
+            if(key == GLFW_KEY_RIGHT) Input::Keys::D = false;
+
             if(key == GLFW_KEY_W) Input::Keys::W = false;
             if(key == GLFW_KEY_A) Input::Keys::A = false;
             if(key == GLFW_KEY_S) Input::Keys::S = false;
             if(key == GLFW_KEY_D) Input::Keys::D = false;
+            if(key == GLFW_KEY_L) Input::Keys::L = false;
+
+            if(key == GLFW_KEY_MINUS) Input::Keys::Minus = false;
+            if(key == GLFW_KEY_EQUAL) Input::Keys::Equal = false;
         }
     }
 

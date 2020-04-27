@@ -71,7 +71,9 @@
         "condition_variable": "cpp",
         "mutex": "cpp",
         "random": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "resumable": "cpp",
+        "future": "cpp"
     },
     "terminal.integrated.shell.windows": "cmd.exe",
     "C_Cpp.errorSquiggles": "Enabled"

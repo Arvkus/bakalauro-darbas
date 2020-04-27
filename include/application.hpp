@@ -31,6 +31,7 @@ public:
 
     void draw()
     {
+        if(is_model_update()) return;  // do not render while model is loading
         if(RECREATE_SWAPCHAIN) return; // do not render while swapchain is recreating
 
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
@@ -81,8 +82,10 @@ public:
         this->descriptors.bind_enviroment_image(&this->enviroment_image);
         this->descriptors.create_descriptor_sets();
 
+        uint64_t start = timestamp_milli();
         create_command_pool();
         create_command_buffers();
+        msg::printl( (float)(timestamp_milli() - start)/1000  );
 
         this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
@@ -145,12 +148,40 @@ private:
 
     Camera camera = Camera();
 
-
     VkCommandPool command_pool;
     std::vector<VkCommandBuffer> command_buffers;
 
     Image enviroment_image;
     Image texture_image;
+
+    //---------------------------------------------------------------------------------
+
+    bool is_model_update()
+    {
+        if(Input::Keys::L == false) return false;
+
+        pfd::open_file f = pfd::open_file("Choose files to read", FILE_PATH, { "Model Files (.glb .gltf)", "*.glb"}, false);
+        if(f.result().size() > 0){
+             vkDeviceWaitIdle(instance.device);
+            msg::printl("File selected from dialog: ", f.result()[0]);
+
+            vkDestroyCommandPool(instance.device, command_pool, nullptr);
+            //this->descriptors.destroy();
+            this->model.destroy();
+
+            Loader loader = Loader();
+            model = loader.load_glb(f.result()[0].c_str());
+            model.create_buffers(&this->instance);
+            model.create_material(&this->descriptors);
+
+            create_command_pool();
+            create_command_buffers();
+
+        }else{
+            msg::printl("No file selected from dialog");
+        }
+        return false;
+    }
 
     //---------------------------------------------------------------------------------
 

@@ -4,12 +4,10 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-
 // #include <vulkan/vulkan.h> // glfw includes vulkan
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,6 +17,10 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <stb/stb_image_resize.h>
+
+#include "pfd/portable-file-dialogs.h"
+#pragma comment(lib,"user32.lib") 
+#pragma comment(lib,"shell32.lib") 
 
 #include <json/json.hpp>
 
@@ -52,6 +54,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 bool APP_RUNNING = true;
 bool RECREATE_SWAPCHAIN = false;
 HANDLE H_CONSOLE = GetStdHandle(STD_OUTPUT_HANDLE);
+std::string FILE_PATH = "C:\\";
 
 const std::vector<const char*> VALIDATION_LAYERS = {
     "VK_LAYER_KHRONOS_validation",
