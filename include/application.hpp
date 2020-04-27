@@ -73,7 +73,7 @@ public:
 
         //car = loader.load_glb("models/car.glb");
 
-        create_image_buffers();
+        //create_image_buffers();
         create_enviroment_buffer();
        // hdr_test();
 
@@ -96,14 +96,11 @@ public:
         
         // destroy outdated objects
         this->swapchain.destroy();
-        this->descriptors.destroy();
         this->pipeline.destroy();
+        this->skybox_pipeline.destroy();
         vkDestroyCommandPool(instance.device, command_pool, nullptr);
 
         // recreate objects
-        
-        this->descriptors.init(&this->instance);
-
         this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
         this->pipeline.create_graphics_pipeline();
 
@@ -111,9 +108,6 @@ public:
         this->skybox_pipeline.create_skybox_pipeline();
 
         this->swapchain.init(&this->instance, &this->render_pass);
-
-        this->descriptors.bind_diffuse_image(&this->texture_image);
-        this->descriptors.create_descriptor_sets();
 
         create_command_pool();
         create_command_buffers();
@@ -127,11 +121,15 @@ public:
 
         this->swapchain.destroy();
         this->descriptors.destroy();
+        
+        this->skybox_pipeline.destroy();
         this->pipeline.destroy();
 
+        enviroment_image.destroy();
+        skybox.destroy();
         model.destroy();
-        texture_image.destroy();
 
+        vkDestroyRenderPass(instance.device, this->render_pass, nullptr);
         vkDestroyCommandPool(instance.device, command_pool, nullptr);
 
         this->instance.destroy();
@@ -257,7 +255,8 @@ private:
 
         printf("Recorded commands \n");
     }
-
+    
+    /*
     void create_image_buffers()
     {
         // read image
@@ -273,6 +272,7 @@ private:
 
         printf("Created texture \n");
     }
+    */
 
     void create_enviroment_buffer()
     {

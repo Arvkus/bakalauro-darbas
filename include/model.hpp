@@ -100,8 +100,7 @@ public:
     void create_material(Descriptors *descriptors, glm::mat4 model_cframe)
     {   
         model_cframe *= construct_matrix();
-        msg::printl(model_cframe);
-
+        
         for(Mesh& mesh: children){
             mesh.create_material(descriptors, model_cframe);
         }
@@ -134,7 +133,13 @@ public:
     }
 
     void destroy(){
+        for(Mesh& mesh : children){
+            mesh.destroy();
+        }
 
+        for(Primitive& primitive : primitives){
+            primitive.destroy();
+        }
     }
     
 private:

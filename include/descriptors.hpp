@@ -19,6 +19,11 @@ public:
     {
         vkDestroyDescriptorPool(instance->device, descriptor_pool, nullptr);
         vkDestroyDescriptorSetLayout(instance->device, descriptor_set_layout, nullptr);
+
+        
+        for(uint32_t i = 0; i < MAX_OBJECTS; i++){
+            image_pool[i].destroy();
+        }
         
         uniform_buffer.destroy();
         dynamic_uniform_buffer.destroy();
@@ -39,21 +44,22 @@ public:
         stbi_uc* pixels = stbi_load("textures/placeholder.png", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
 
+        stbi_uc* new_pixels = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
+        stbir_resize_uint8(pixels, width , height , 0,
+            new_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
 
         for(uint32_t i = 0; i < MAX_OBJECTS; i++){
             image_pool[i].init(this->instance);
             image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-            image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, pixels);
+            image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, new_pixels);
             image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         }
 
+        stbi_image_free(new_pixels);
         stbi_image_free(pixels);
     }
 
-    void bind_diffuse_image(Image *image){ diffuse = image; }
     void bind_enviroment_image(Image *image){ enviroment = image; }
-    // specular +
-    // roughness +
 
     void create_descriptor_sets()
     {
