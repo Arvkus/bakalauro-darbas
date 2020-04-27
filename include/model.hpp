@@ -3,7 +3,7 @@
 
 struct Material { // Dynamic
 	alignas(4) float roughness = 1.0;
-    alignas(4) float metalliness = 1.0;
+    alignas(4) float metalliness = 0.0;
 	alignas(4) uint32_t is_diffuse_color = 0; // bool if there's texture
     alignas(4) uint32_t texture_id = 0; // bool if there's texture
 	alignas(16) glm::vec4 diffuse_color; // color if no texture

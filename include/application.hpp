@@ -166,14 +166,21 @@ private:
             msg::printl("File selected from dialog: ", f.result()[0]);
 
             vkDestroyCommandPool(instance.device, command_pool, nullptr);
-            //this->descriptors.destroy();
+            this->descriptors.destroy();
             this->model.destroy();
-
+            //-----------------------------------------
+            this->descriptors.init(&this->instance);
+            this->descriptors.bind_enviroment_image(&this->enviroment_image);
+            
             Loader loader = Loader();
             model = loader.load_glb(f.result()[0].c_str());
             model.create_buffers(&this->instance);
             model.create_material(&this->descriptors);
 
+            msg::printl(model.min, model.max);
+            camera.set_region(model.min, model.max);
+
+            this->descriptors.create_descriptor_sets();
             create_command_pool();
             create_command_buffers();
 

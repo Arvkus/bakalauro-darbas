@@ -34,6 +34,7 @@ public:
 
     void set_region(glm::vec3 min, glm::vec3 max)
     {
+        origin = glm::vec3(0);
         distance = std::max(max.length(), min.length()) ;
         scroll_speed = distance/10;
     }

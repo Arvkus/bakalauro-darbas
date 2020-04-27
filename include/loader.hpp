@@ -218,6 +218,7 @@ private:
 
                         if(is(pbr,"metallicFactor")){
                             po.material.metalliness = pbr["metallicFactor"];
+                            gap(depth+1); msg::warn("metalliness: ",po.material.metalliness);
                         }else{
                             // metalic texture
                         }
