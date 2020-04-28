@@ -5,7 +5,7 @@ if exist "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxi
     call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
 )
 
-call compile.bat
+REM call compile.bat
 
 set compilerflags=/Od /Zi /EHsc /std:c++17 /I include /I dependencies
 set linkerflags=/OUT:bin\main.exe lib\glfw3dll.lib lib\vulkan-1.lib

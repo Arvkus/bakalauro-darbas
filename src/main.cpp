@@ -6,6 +6,15 @@
 Application app;
 GLFWwindow *window;
 
+void main(){
+    Loader loader = Loader();
+    Model model;
+    model = loader.load_glb("models/tests/duck.glb");
+    model = loader.load_glb("models/tests/engine.glb");
+
+    std::cin.ignore();
+}
+
 void render_thread_function()
 {
     uint32_t frame_count = 0;
@@ -38,7 +47,7 @@ void render_thread_function()
     }
 }
 
-int main(int argc, char *argv[])
+int main2(int argc, char *argv[])
 {
     msg::print("Program args: ");
     for(uint32_t i = 0; i < argc; i++){

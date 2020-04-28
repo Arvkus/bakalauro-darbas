@@ -33,4 +33,29 @@ int main(int argc, char *argv[])
     for(std::unique_ptr<Animal>& a : animals){
         a->sound();
     }
-    
+
+```
+
+new descriptor pseudo code
+```cpp
+
+class Descriptor{...};
+
+Memory::init(&Instance)
+Descriptor::init(&Instance);
+Descriptor md; // model descriptor
+
+// add_buffer(type, count, size)
+// add_sampler(type, count, width, height)
+// bindings in order
+md.add_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, sizeof(Material));
+md.add_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32, 256);
+md.add_sampler(VK_DESCRIPTOR_TYPE_UNIFORM_SAMPLER, 32, 512, 512);
+md.create_sets();
+
+```
+
+```cpp
+
+
+```

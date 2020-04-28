@@ -31,7 +31,7 @@ public:
 
     void draw()
     {
-        if(is_model_update()) return;  // do not render while model is loading
+        //if(is_model_update()) return;  // do not render while model is loading
         if(RECREATE_SWAPCHAIN) return; // do not render while swapchain is recreating
 
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
@@ -59,7 +59,7 @@ public:
         this->skybox_pipeline.create_skybox_pipeline();
 
         this->swapchain.init(&this->instance, &this->render_pass);
-        
+        /*
         Loader loader = Loader();
         skybox = loader.load_glb("models/cube.glb");
         skybox.create_buffers(&this->instance);
@@ -71,6 +71,7 @@ public:
 
         msg::printl(model.min, model.max);
         camera.set_region(model.min, model.max);
+        */
 
         //car = loader.load_glb("models/car.glb");
 
@@ -155,7 +156,7 @@ private:
     Image texture_image;
 
     //---------------------------------------------------------------------------------
-
+    /*
     bool is_model_update()
     {
         if(Input::Keys::L == false) return false;
@@ -189,6 +190,7 @@ private:
         }
         return false;
     }
+    */
 
     //---------------------------------------------------------------------------------
 
@@ -272,7 +274,7 @@ private:
             // VK_SUBPASS_CONTENTS_INLINE - render pass commands will be embedded in the primary command buffer itself, no secondary buffers.
             // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - The render pass commands will be executed from secondary command buffers.
             //------------------------------------------
-            
+            /*
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
             skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
 
@@ -280,7 +282,7 @@ private:
 
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
             model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
-
+            */
             //------------------------------------------
             vkCmdEndRenderPass(command_buffers[i]);
 

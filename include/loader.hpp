@@ -13,12 +13,8 @@ class Loader{
 private:
     json content; // json chunk
     std::vector<char> buffer; // binary chunk
-    uint32_t primitive_index = 0;
 
-    glm::vec3 max = glm::vec3(0,0,0);
-    glm::vec3 min = glm::vec3(0,0,0);
-
-    struct MemoryInfo{ // get buffer binary data offset/size/stride  
+    struct MemoryInfo{ // get buffer binary data offset/size/stride 
         uint32_t offset;
         uint32_t stride;
         uint32_t length;
@@ -29,31 +25,13 @@ private:
     /// Print space 'n' amount of times
     void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
 
-    void find_min_max(const json& accessor)
-    {
-        if(is(accessor,"min")){
-            this->min = glm::vec3(
-                accessor["min"][0] < this->min.x? accessor["min"][0] : this->min.x,
-                accessor["min"][1] < this->min.y? accessor["min"][1] : this->min.y,
-                accessor["min"][2] < this->min.z? accessor["min"][2] : this->min.z
-            );
-        }
-
-        if(is(accessor,"max")){
-            this->max = glm::vec3(
-                accessor["max"][0] > this->max.x? accessor["max"][0] : this->max.x,
-                accessor["max"][1] > this->max.y? accessor["max"][1] : this->max.y,
-                accessor["max"][2] > this->max.z? accessor["max"][2] : this->max.z
-            );
-        }
-    }
-
     //----------------------------------------------------
-    /// get primitive's all buffer bytes
+    /// get primitive's memory location/size
     
-    MemoryInfo get_memory_offset(const json& accessor)
+    MemoryInfo get_memory_info(const uint32_t accessor_id)
     {
-        find_min_max(accessor);
+        json accessor = content["accessors"][accessor_id];
+
         std::string type = accessor["type"];
         uint32_t buffer_view_id = accessor["bufferView"];
         uint32_t accessor_offset = is(accessor,"byteOffset")? accessor["byteOffset"] : 0;
@@ -61,7 +39,7 @@ private:
         json buffer_view = content["bufferViews"][buffer_view_id]; // byteOffset
 
         uint32_t buffer_offset = is(buffer_view, "byteOffset")? buffer_view["byteOffset"] : 0;
-        uint32_t buffer_length = is(buffer_view, "byteLength")? buffer_view["byteLength"] : 0;
+        //uint32_t buffer_length = is(buffer_view, "byteLength")? buffer_view["byteLength"] : 0;
         uint32_t stride; // validate if data types are supported by this parser
 
         //-----------------------------------------------------
@@ -74,217 +52,182 @@ private:
             throw std::runtime_error("nuknown accessor component type");
         }else throw std::runtime_error("unknown accessor type");
         //----------------------------------------------------
-
         MemoryInfo memory = {};
         memory.offset = buffer_offset + accessor_offset;
-        memory.length = buffer_length;
+        memory.length = (uint32_t)accessor["count"] * stride; // byte length
         memory.stride = stride;
+
         return memory;
     }
+
+    //----------------------------------------------------
+    /// get all primitive data and construct vertices
+
+    std::vector<Vertex> create_vertices(const json& primitive)
+    {
+        MemoryInfo memory;
+        uint32_t accessor_id;
+
+        std::vector<uint32_t> indices;
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> texcoords;
+        
+        //------------------------------------------------
+         
+        accessor_id = primitive["attributes"]["POSITION"];
+        memory = get_memory_info(accessor_id);
+        positions.resize(memory.length / memory.stride);
+
+        for(uint32_t i = 0; i < positions.size(); i++){
+            std::memcpy(&positions[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
+        }
+        //------------------------------------------------
+        accessor_id = primitive["attributes"]["NORMAL"];
+        memory = get_memory_info(accessor_id);
+        normals.resize(memory.length / memory.stride);
+
+        for(uint32_t i = 0; i < normals.size(); i++){
+            std::memcpy(&normals[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
+        }
+        //------------------------------------------------
+        
+        // texcoord is optional
+        if(is(primitive["attributes"],"TEXCOORD_0")){
+            accessor_id = primitive["attributes"]["TEXCOORD_0"];
+            memory = get_memory_info(accessor_id);
+            texcoords.resize(memory.length / memory.stride);
+
+            for(uint32_t i = 0; i < texcoords.size(); i++){
+                std::memcpy(&texcoords[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
+            }
+        }else{
+            texcoords.resize(positions.size());
+        }
+        //------------------------------------------------
+        // mesh can be without indices
+        if(is(primitive,"indices")){
+            accessor_id = primitive["indices"];
+            memory = get_memory_info(accessor_id);
+            indices.resize(memory.length / memory.stride);
+
+            for(uint32_t i = 0; i < indices.size(); i++){
+                std::memcpy(&indices[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
+            }
+        }else{
+            throw std::runtime_error("Mesh is without indices, indices are required");
+        }
+        //------------------------------------------------
+        // construct vertices
+        std::vector<Vertex> vertices(positions.size());
+        if(positions.size() == normals.size() && normals.size() == texcoords.size()){
+            for(uint32_t i = 0; i < positions.size(); i++){
+                vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
+            }
+        }else{
+            throw std::runtime_error("Vertex primitive data length is not equal.");
+        }
+
+        return vertices;
+    }
+    
+
+    //----------------------------------------------------
+    /// get primitive's texture pixel data
+
+    std::vector<char> get_texture_pixels(uint32_t texture_index)
+    {
+        uint32_t source_index = content["textures"][texture_index]["source"];
+        json image = content["images"][source_index];
+        
+        json buffer_view = content["bufferViews"][(uint32_t)image["bufferView"]];
+        uint32_t byte_length = buffer_view["byteLength"];
+        uint32_t byte_offset = is(buffer_view,"byteOffset")? buffer_view["byteOffset"] : 0;
+
+        int width = 0, height = 0, channel = 0;
+        stbi_uc* pixels = stbi_load_from_memory( 
+            reinterpret_cast<const stbi_uc*>(buffer.data()) + byte_offset, 
+            byte_length,
+            &width, &height, &channel,
+            STBI_rgb_alpha
+        );
+
+        // resize and write to pixel buffer
+        std::vector<char> pixel_buffer(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
+        stbir_resize_uint8(pixels, width , height , 0, (unsigned char*)pixel_buffer.data(), MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
+        stbi_image_free(pixels);
+        return pixel_buffer;
+    } 
     
     //----------------------------------------------------
     /// Scene is made out of `nodes`, each node can have more nodes as children
+
     std::vector<Mesh> build_meshes(const json& nodes, int depth = 0)
     {
         std::vector<Mesh> model_meshes;
 
+        // node
         for(uint32_t node_id: nodes)
         {
-            
             json node = content["nodes"][node_id];
+            gap(depth); msg::highlight(node["name"] == "null"? node["name"] : "null");
 
-            if(!is(node,"mesh")){ // node can be without mesh, skip nodes without mesh
-                continue;
-            }; 
-        
-            Mesh model_mesh = Mesh();
-
-            // get mesh additional data !!!! node data not mesh
-            model_mesh.name = is(node,"name")? node["name"] : "null";
-
-            model_mesh.translation = is(node, "translation")? glm::vec3( 
-                node["translation"][0],
-                node["translation"][1],
-                node["translation"][2]
-            ) : glm::vec3(0);
-
-            model_mesh.scale = is(node, "scale")? glm::vec3( 
-                node["scale"][0],
-                node["scale"][1],
-                node["scale"][2]
-            ) : glm::vec3(1);
-
-            model_mesh.rotation = is(node, "rotation")? glm::quat( 
-                node["rotation"][3],
-                node["rotation"][0],
-                node["rotation"][1],
-                node["rotation"][2]
-            ) : glm::quat(1,0,0,0);
-
-            gap(depth); // debug output
-            msg::highlight(model_mesh.name);
-
-            // get mesh primitives
-            json mesh = content["meshes"][(uint32_t)node["mesh"]];
-            for(json primitive : mesh["primitives"])
+            // mesh
+            if(is(node,"mesh"))
             {
-                Primitive po; // primitive object
-                po.primitive_index = primitive_index;
+                json mesh = content["meshes"][ (uint32_t)node["mesh"] ];
+                gap(depth+1); msg::success(mesh["name"]);
 
-                gap(depth+1);
-                msg::printl("primitive ", primitive_index);
+                // primitive
+                for(json primitive : mesh["primitives"])
+                {   
+                    gap(depth+2); msg::printl("primitive");
 
-                if(!is(primitive,"indices")) throw std::runtime_error("mesh doesn't have indices");
-                if(!is(primitive["attributes"],"NORMAL")) throw std::runtime_error("mesh doesn't have normals");
-                if(!is(primitive["attributes"],"POSITION")) throw std::runtime_error("mesh doesn't have positions");
+                    // vertices
+                    std::vector<Vertex> vertices = create_vertices(primitive);
 
-                uint32_t accessor_id; 
-                MemoryInfo memory;
-                json accessor;
+                    // material
+                    if(is(primitive, "material"))
+                    {
+                        uint32_t material_id = primitive["material"];
+                        json material = content["materials"][material_id];
+                        gap(depth+2); msg::printl(material["name"]);
 
-                std::vector<glm::vec2> texcoords;
-                std::vector<glm::vec3> positions;
-                std::vector<glm::vec3> normals;
-         
-                //----------------------------------------------------------------
-                accessor_id = primitive["attributes"]["POSITION"];
-                accessor = content["accessors"][accessor_id];
-                memory = get_memory_offset(accessor);
-                positions.resize(accessor["count"]);
+
+                        if(is(material,"pbrMetallicRoughness")){
+                            json pbr = material["pbrMetallicRoughness"];
+
+                            // pbr textures
+                            if(is(pbr,"baseColorTexture")){
+                                uint32_t texture_index = pbr["baseColorTexture"]["index"];
+                                std::vector<char> pixels = get_texture_pixels(texture_index);
+                            }
+
+                            if(is(pbr,"metallicRoughnessTexture")){
+                                uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
+                                std::vector<char> pixels = get_texture_pixels(texture_index);
+                            }
+
+                            // pbr vertices
+                            if(is(pbr,"baseColorFactor")) {};
+                            if(is(pbr,"metallicFactor")) {};
+                            if(is(pbr,"roughnessrFactor")) {};
+                        } // pbr
+
+                    } // material
+
+                } // primitives
                 
-                for(uint32_t i = 0; i < positions.size(); i++){
-                    std::memcpy(&positions[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
-                }
-                //----------------------------------------------------------------
-                accessor_id = primitive["attributes"]["NORMAL"];
-                accessor = content["accessors"][accessor_id];
-                memory = get_memory_offset(accessor);
-                normals.resize(accessor["count"]);
+            } // mesh
 
-                for(uint32_t i = 0; i < normals.size(); i++){
-                    std::memcpy(&normals[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
-                }
-
-                //----------------------------------------------------------------
-                if(is(primitive["attributes"],"TEXCOORD_0")) // check if texcoords exist
-                {
-                    accessor_id = primitive["attributes"]["TEXCOORD_0"];
-                    accessor = content["accessors"][accessor_id];
-                    memory = get_memory_offset(accessor);
-                    texcoords.resize(accessor["count"]);
-
-                    for(uint32_t i = 0; i < texcoords.size(); i++){
-                        std::memcpy(&texcoords[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
-                    }
-                }else
-                {
-                    texcoords.resize(positions.size()); // resize base on positions
-                }
-                //----------------------------------------------------------------
-                accessor_id = primitive["indices"];
-                accessor = content["accessors"][accessor_id];
-                memory = get_memory_offset(accessor);
-                po.indices.resize(accessor["count"]);
-
-                for(uint32_t i = 0; i < po.indices.size(); i++){
-                    std::memcpy(&po.indices[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
-                }
-                
-                //----------------------------------------------------------------
-                // construct vertices
-                if(positions.size() == normals.size() && normals.size() == texcoords.size()){
-                    for(uint32_t i = 0; i < positions.size(); i++){
-                        po.vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
-                    }
-                }else{
-                    throw std::runtime_error("Vertex primitive data length is not equal.");
-                }
-                //----------------------------------------------------------------
-                // materials
-                if(is(primitive,"material"))
-                {
-                    uint32_t material_id = primitive["material"];
-                    json material = content["materials"][material_id];
-                    gap(depth+1); msg::success(material["name"]);
-
-                    if(is(material,"pbrMetallicRoughness")){
-                        json pbr = material["pbrMetallicRoughness"];
-
-                        if(is(pbr,"roughnessFactor")){
-                            po.material.roughness = pbr["roughnessFactor"];
-                        }else{
-                            // roughness texture
-                        }
-
-                        if(is(pbr,"metallicFactor")){
-                            po.material.metalliness = pbr["metallicFactor"];
-                            gap(depth+1); msg::warn("metalliness: ",po.material.metalliness);
-                        }else{
-                            // metalic texture
-                        }
-                        
-                        if(is(pbr,"baseColorFactor")){
-                            po.material.is_diffuse_color = 1;
-                            po.material.diffuse_color = glm::vec4(
-                                pbr["baseColorFactor"][0],
-                                pbr["baseColorFactor"][1],
-                                pbr["baseColorFactor"][2],
-                                pbr["baseColorFactor"][3]
-                            );  
-                        }
-
-                        if(is(pbr,"baseColorTexture")){
-                            uint32_t texture_index = pbr["baseColorTexture"]["index"];
-                            uint32_t source_index = content["textures"][texture_index]["source"];
-                            json image = content["images"][source_index];
-                            
-                            json buffer_view = content["bufferViews"][(int)image["bufferView"]];
-                            uint32_t byte_length = buffer_view["byteLength"];
-                            uint32_t byte_offset = is(buffer_view,"byteOffset")? buffer_view["byteOffset"] : 0;
-
-                            int width = 0, height = 0, channel = 0;
-                            stbi_uc* pixels = stbi_load_from_memory( 
-                                reinterpret_cast<const stbi_uc*>(buffer.data()) + byte_offset, 
-                                byte_length,
-                                &width, &height, &channel,
-                                STBI_rgb_alpha
-                            );
-                            
-                            po.diffuse_pixels = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
-                                stbir_resize_uint8(pixels, width , height , 0,
-                                    po.diffuse_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
-                            
-                            stbi_image_free(pixels);
-                
-                        }
-
-
-                    }else{
-                        po.material.metalliness = 1.0;
-                        po.material.roughness = 1.0;
-                    }
-
-       
-
-                    
-                }
-                 //----------------------------------------------------------------
-                // primitive mesh
-                model_mesh.primitives.push_back(po);
-                primitive_index++;
+            if(is(node,"children")){
+                build_meshes(node["children"], depth+1);
             }
-
-            // for(const Vertex& vertex : model_mesh.vertices)print(vertex.position, vertex.normal, vertex.texture, "\n");
-
-            // loop through all children recursively
-            if(is(node,"children")) model_mesh.children = build_meshes(node["children"], depth+1);
-            model_meshes.push_back(model_mesh);
             
         }
         
         return model_meshes;
     }
-
 
     //----------------------------------------------------
 public:
@@ -356,13 +299,6 @@ public:
 
             Model model;
             model.meshes = build_meshes(content["scenes"][0]["nodes"]);
-            model.name = path;
-            model.min = this->min;
-            model.max = this->max;
-
-            this->primitive_index = 0;
-            this->max = glm::vec3(0,0,0);
-            this->min = glm::vec3(0,0,0);
             
             msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
             return model;
