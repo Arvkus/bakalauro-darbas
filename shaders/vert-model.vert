@@ -37,5 +37,5 @@ void main() {
     outPosition = vec3( m * vec4(inPosition, 1.0) ); //vec3(m[3][0], m[3][1], m[3][2]);
     outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
 
-    gl_Position = ubo.proj * ubo.view * material.model * vec4(inPosition, 1.0);
+    gl_Position = ubo.proj * ubo.view * vec4(inPosition, 1.0);
 }

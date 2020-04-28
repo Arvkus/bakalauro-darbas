@@ -20,6 +20,22 @@ private:
         uint32_t length;
     };
 
+    struct Counter{
+        uint32_t mesh = 0;
+        uint32_t albedo_texture = 0;
+        uint32_t metal_roughness_texture = 0;
+        uint32_t indices = 0;
+        uint32_t vertices = 0;
+
+        void reset(){
+            this->mesh = 0;
+            this->albedo_texture = 0;
+            this->metal_roughness_texture = 0;
+            this->indices = 0;
+            this->vertices = 0;
+        }
+    } counter;
+
     /// Check if json has value
     bool is(const json& node, const std::string& value){ return node.find(value) != node.end(); }
     /// Print space 'n' amount of times
@@ -61,6 +77,29 @@ private:
     }
 
     //----------------------------------------------------
+    // get vertices
+
+    std::vector<uint32_t> create_indices(const json& primitive)
+    {
+        std::vector<uint32_t> indices;
+
+        // mesh can be without indices
+        if(is(primitive,"indices")){
+            uint32_t accessor_id = primitive["indices"];
+            MemoryInfo memory = get_memory_info(accessor_id);
+            indices.resize(memory.length / memory.stride);
+
+            for(uint32_t i = 0; i < indices.size(); i++){
+                std::memcpy(&indices[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
+            }
+        }else{
+            throw std::runtime_error("Mesh is without indices, indices are required");
+        }
+
+        return indices;
+    }
+
+    //----------------------------------------------------
     /// get all primitive data and construct vertices
 
     std::vector<Vertex> create_vertices(const json& primitive)
@@ -68,7 +107,6 @@ private:
         MemoryInfo memory;
         uint32_t accessor_id;
 
-        std::vector<uint32_t> indices;
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
         std::vector<glm::vec2> texcoords;
@@ -105,24 +143,11 @@ private:
             texcoords.resize(positions.size());
         }
         //------------------------------------------------
-        // mesh can be without indices
-        if(is(primitive,"indices")){
-            accessor_id = primitive["indices"];
-            memory = get_memory_info(accessor_id);
-            indices.resize(memory.length / memory.stride);
-
-            for(uint32_t i = 0; i < indices.size(); i++){
-                std::memcpy(&indices[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
-            }
-        }else{
-            throw std::runtime_error("Mesh is without indices, indices are required");
-        }
-        //------------------------------------------------
         // construct vertices
         std::vector<Vertex> vertices(positions.size());
         if(positions.size() == normals.size() && normals.size() == texcoords.size()){
             for(uint32_t i = 0; i < positions.size(); i++){
-                vertices.push_back( Vertex(positions[i], normals[i], texcoords[i]));
+                vertices[i] = Vertex(positions[i], normals[i], texcoords[i]);
             }
         }else{
             throw std::runtime_error("Vertex primitive data length is not equal.");
@@ -158,75 +183,100 @@ private:
         stbi_image_free(pixels);
         return pixel_buffer;
     } 
-    
+
+    //----------------------------------------------------
+
+    std::vector<Mesh> build_meshes(uint32_t mesh_id, uint32_t depth = 0)
+    {
+        std::vector<Mesh> model_meshes;
+        json mesh = content["meshes"][ mesh_id ];
+
+        // primitive
+        for(json primitive : mesh["primitives"])
+        {   
+            Mesh model_mesh;
+
+            if(is(mesh, "name")){
+                model_mesh.name = mesh["name"];
+                model_mesh.name += " " + std::to_string(this->counter.mesh);
+            } 
+
+            // vertices, indices
+            model_mesh.indices = create_indices(primitive);
+            model_mesh.vertices = create_vertices(primitive);
+            
+            model_mesh.id = this->counter.mesh;
+            model_mesh.ioffset = this->counter.indices;
+            model_mesh.voffset = this->counter.vertices;
+
+            this->counter.indices += model_mesh.indices.size();
+            this->counter.vertices += model_mesh.vertices.size();
+            
+            gap(depth); msg::success(mesh["name"]," primitive");
+
+            // material
+            if(is(primitive, "material"))
+            {
+                uint32_t material_id = primitive["material"];
+                json material = content["materials"][material_id];
+                gap(depth); msg::printl(material["name"]);
+
+
+                if(is(material,"pbrMetallicRoughness")){
+                    json pbr = material["pbrMetallicRoughness"];
+
+                    // pbr textures
+                    if(is(pbr,"baseColorTexture")){
+                        uint32_t texture_index = pbr["baseColorTexture"]["index"];
+                        std::vector<char> pixels = get_texture_pixels(texture_index);
+                    }
+
+                    if(is(pbr,"metallicRoughnessTexture")){
+                        uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
+                        std::vector<char> pixels = get_texture_pixels(texture_index);
+                    }
+
+                    // pbr vertices
+                    if(is(pbr,"baseColorFactor")) {};
+                    if(is(pbr,"metallicFactor")) {};
+                    if(is(pbr,"roughnessrFactor")) {};
+                } // pbr
+
+            } // material
+
+            this->counter.mesh++;
+            model_meshes.push_back(model_mesh);
+        } // primitives
+
+        return model_meshes;
+    }
     //----------------------------------------------------
     /// Scene is made out of `nodes`, each node can have more nodes as children
 
-    std::vector<Mesh> build_meshes(const json& nodes, int depth = 0)
+    std::vector<Node> build_nodes(const json& nodes, int depth = 0)
     {
-        std::vector<Mesh> model_meshes;
-
-        // node
+        std::vector<Node> model_nodes;
         for(uint32_t node_id: nodes)
         {
+            Node model_node;
             json node = content["nodes"][node_id];
-            gap(depth); msg::highlight(node["name"] == "null"? node["name"] : "null");
-
-            // mesh
-            if(is(node,"mesh"))
-            {
-                json mesh = content["meshes"][ (uint32_t)node["mesh"] ];
-                gap(depth+1); msg::success(mesh["name"]);
-
-                // primitive
-                for(json primitive : mesh["primitives"])
-                {   
-                    gap(depth+2); msg::printl("primitive");
-
-                    // vertices
-                    std::vector<Vertex> vertices = create_vertices(primitive);
-
-                    // material
-                    if(is(primitive, "material"))
-                    {
-                        uint32_t material_id = primitive["material"];
-                        json material = content["materials"][material_id];
-                        gap(depth+2); msg::printl(material["name"]);
 
 
-                        if(is(material,"pbrMetallicRoughness")){
-                            json pbr = material["pbrMetallicRoughness"];
+            model_node.name = is(node,"name")? node["name"] : "node";
+            gap(depth); msg::highlight(model_node.name); // debug
 
-                            // pbr textures
-                            if(is(pbr,"baseColorTexture")){
-                                uint32_t texture_index = pbr["baseColorTexture"]["index"];
-                                std::vector<char> pixels = get_texture_pixels(texture_index);
-                            }
-
-                            if(is(pbr,"metallicRoughnessTexture")){
-                                uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
-                                std::vector<char> pixels = get_texture_pixels(texture_index);
-                            }
-
-                            // pbr vertices
-                            if(is(pbr,"baseColorFactor")) {};
-                            if(is(pbr,"metallicFactor")) {};
-                            if(is(pbr,"roughnessrFactor")) {};
-                        } // pbr
-
-                    } // material
-
-                } // primitives
-                
-            } // mesh
+            if(is(node,"mesh")){
+                model_node.meshes = build_meshes(node["mesh"], depth+1);
+            } 
 
             if(is(node,"children")){
-                build_meshes(node["children"], depth+1);
+                model_node.children = build_nodes(node["children"], depth+1);
             }
-            
-        }
+
+            model_nodes.push_back(model_node);
+        } 
         
-        return model_meshes;
+        return model_nodes;
     }
 
     //----------------------------------------------------
@@ -298,7 +348,10 @@ public:
             file.close();
 
             Model model;
-            model.meshes = build_meshes(content["scenes"][0]["nodes"]);
+            model.nodes = build_nodes(content["scenes"][0]["nodes"]);
+            model.total_indices_size = this->counter.indices;
+            model.total_vertices_size = this->counter.vertices;
+            this->counter.reset();
             
             msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
             return model;

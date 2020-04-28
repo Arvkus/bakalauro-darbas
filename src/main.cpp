@@ -6,12 +6,12 @@
 Application app;
 GLFWwindow *window;
 
-void main(){
+void main2(){
     Loader loader = Loader();
     Model model;
-    model = loader.load_glb("models/tests/duck.glb");
-    model = loader.load_glb("models/tests/engine.glb");
-
+    model = loader.load_glb("models/hierarchy.glb");
+    //model = loader.load_glb("models/tests/duck.glb");
+    //model = loader.load_glb("models/tests/engine.glb");
     std::cin.ignore();
 }
 
@@ -47,7 +47,7 @@ void render_thread_function()
     }
 }
 
-int main2(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     msg::print("Program args: ");
     for(uint32_t i = 0; i < argc; i++){

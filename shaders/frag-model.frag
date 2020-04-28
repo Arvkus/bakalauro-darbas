@@ -66,5 +66,6 @@ void main() {
     // combined
     vec3 color = (ambient_color + diffuse_color + specular_color) * albedo;
     vec3 result = color * (1-metal) + mapped * (metal);
-    outColor = vec4(result, 1.0);
+    //outColor = vec4(result, 1.0);
+    outColor = vec4(ambient_color, 1.0);
 }

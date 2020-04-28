@@ -149,10 +149,20 @@ private:
         std::vector<VkPhysicalDevice> physical_devices(device_count);
         vkEnumeratePhysicalDevices(vulkan_instance, &device_count, physical_devices.data());
 
-        // pick first device
+        // pick first device, TODO: fix quick hack
+        if(is_device_compatible(physical_devices[0]) && is_device_surface_capable(physical_devices[0])){
+            this->physical_device = physical_devices[0]; 
+        }else{
+            is_device_compatible(physical_devices[1]);
+            is_device_surface_capable(physical_devices[1]);
+            this->physical_device = physical_devices[1]; 
+        }
+
+        /*
         if(!is_device_compatible(physical_devices[0])) throw std::runtime_error("selected device is not compatible");
         if(!is_device_surface_capable(physical_devices[0])) throw std::runtime_error("surface is not capable for rendering");
         this->physical_device = physical_devices[0]; 
+        */
     }
 
     void pick_device_queues()
@@ -269,7 +279,7 @@ private:
         printf("Selected: %s | %s | ",device_properties.deviceName, version_to_string(device_properties.apiVersion).c_str());
         switch(device_properties.deviceType){
             case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   printf("VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU \n"  ); break;
-            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: printf("VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU \n"); break;
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: printf("VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU \n"); return false; break;
             case VK_PHYSICAL_DEVICE_TYPE_CPU:            printf("VK_PHYSICAL_DEVICE_TYPE_CPU \n"           ); break;
             default:                                     printf("VK_PHYSICAL_DEVICE_TYPE_OTHER \n"         ); break;
         }
