@@ -23,6 +23,7 @@ public:
         
         for(uint32_t i = 0; i < MAX_IMAGES; i++){
             color_image_pool[i].destroy();
+            material_image_pool[i].destroy();
         }
         
         uniform_buffer.destroy();
@@ -100,12 +101,21 @@ public:
             imageInfos[i].sampler = texture_sampler;
         }
 
+
+        VkDescriptorImageInfo materialInfos[MAX_IMAGES];
+        for (uint32_t i = 0; i < MAX_IMAGES; ++i)
+        {
+            materialInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            materialInfos[i].imageView = material_image_pool[i].image_view; // this->diffuse->image_view; //
+            materialInfos[i].sampler = texture_sampler;
+        }
+
         VkDescriptorImageInfo enviromentInfo = {};
         enviromentInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         enviromentInfo.imageView = enviroment->image_view; 
         enviromentInfo.sampler = texture_sampler;
 
-        std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
+        std::array<VkWriteDescriptorSet, 5> descriptorWrites = {};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptor_sets;
@@ -138,6 +148,16 @@ public:
         descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[3].descriptorCount = 1;
         descriptorWrites[3].pImageInfo = &enviromentInfo;
+
+        descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[4].dstSet = descriptor_sets;
+        descriptorWrites[4].dstBinding = 4;
+        descriptorWrites[4].dstArrayElement = 0;
+        descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[4].descriptorCount = MAX_IMAGES; 
+        descriptorWrites[4].pImageInfo = materialInfos;
+
+        
         
         vkUpdateDescriptorSets(instance->device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         
@@ -235,14 +255,19 @@ private:
         skyboxLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         skyboxLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         
-
+        VkDescriptorSetLayoutBinding materialLayoutBinding = {};
+        materialLayoutBinding.binding = 4;
+        materialLayoutBinding.descriptorCount = MAX_IMAGES; // array of images
+        materialLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        materialLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
        
         
-        std::array<VkDescriptorSetLayoutBinding, 4> bindings = {
+        std::array<VkDescriptorSetLayoutBinding, 5> bindings = {
             dynamicMaterial,
             uboLayoutBinding, 
             samplerLayoutBinding, 
             skyboxLayoutBinding,
+            materialLayoutBinding
         };
 
         VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
@@ -257,7 +282,7 @@ private:
 
     void create_descriptor_pool()
     {
-        std::array<VkDescriptorPoolSize, 4> pool_sizes = {};
+        std::array<VkDescriptorPoolSize, 5> pool_sizes = {};
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; // !dyn
         pool_sizes[0].descriptorCount = 1;
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -266,7 +291,8 @@ private:
         pool_sizes[2].descriptorCount = 1;
         pool_sizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         pool_sizes[3].descriptorCount = 1;
-
+        pool_sizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        pool_sizes[4].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         poolInfo.poolSizeCount = (uint32_t)pool_sizes.size();

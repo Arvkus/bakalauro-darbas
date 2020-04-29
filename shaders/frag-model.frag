@@ -35,13 +35,17 @@ void main() {
     float gamma = 1;
     float exposure = 0.3;
     
+    float rough = mesh.roughness;
+    float metal = mesh.metalliness;
+
+
     vec3 albedo = mesh.albedo_texture_id == -1? mesh.base_color : texture(colorSampler[mesh.albedo_texture_id], inTexcoord).rgb;
+    vec3 material = mesh.material_texture_id == -1? vec3(0, rough, metal) : texture(materialSampler[mesh.material_texture_id], inTexcoord).rgb;
+
 
     vec3 light_color = vec3(0.6); 
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
     
-    float rough = mesh.roughness;
-    float metal = mesh.metalliness;
 
     //-------------------------------
     // ambient color;
@@ -52,7 +56,7 @@ void main() {
     vec3 diffuse_color = light_color * brightness;
 
     // specular color
-    float specular_str = 1.0 - rough;
+    float specular_str = 1.0 - material.y; // roughness
     vec3 I = normalize(inViewPos - inPosition); // to what fragment camera is looking (direction)
     vec3 R = reflect(-light_dir, inNormal);
     float spec = pow(max(dot(I, R), 0.0), 64);
@@ -66,6 +70,8 @@ void main() {
 
     // combined
     vec3 color = (ambient_color + diffuse_color + specular_color) * albedo;
-    vec3 result = color * (1-metal) + mapped * (metal);
+    //vec3 result = color * (1-metal) + (mapped * metal);
+
+    vec3 result = color * (1-material.z) + (mapped * material.z);
     outColor = vec4(result, 1.0);
 }
