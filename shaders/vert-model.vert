@@ -9,6 +9,7 @@ layout(location = 0) out vec2 outTexcoord;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outPosition;
 layout(location = 3) out vec3 outViewPos;
+layout(location = 4) out float outExposure;
 
 layout(binding = 0) uniform Mesh {
     mat4 cframe;
@@ -23,6 +24,7 @@ layout(binding = 1) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
+    float exposure;
 } ubo;
 
 vec3 center  = vec3(0.0);
@@ -36,6 +38,8 @@ void main() {
     outNormal = mat3(mesh.cframe) * inNormal;  // transpose(inverse(material.model))
     outPosition = vec3( m * vec4(inPosition, 1.0) ); //vec3(m[3][0], m[3][1], m[3][2]);
     outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
+
+    outExposure = ubo.exposure;
 
     gl_Position = ubo.proj * ubo.view * mesh.cframe * vec4(inPosition, 1.0);
 }

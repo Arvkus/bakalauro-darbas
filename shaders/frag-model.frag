@@ -5,6 +5,7 @@ layout(location = 0) in vec2 inTexcoord;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inPosition;
 layout(location = 3) in vec3 inViewPos;
+layout(location = 4) in float inExposure;
 
 layout(location = 0) out vec4 outColor;
 
@@ -33,7 +34,7 @@ vec2 sample_spherical_map(vec3 v)
 void main() {
     // proprties
     float gamma = 1;
-    float exposure = 0.3;
+    float exposure = inExposure;
     
     float rough = mesh.roughness;
     float metal = mesh.metalliness;
@@ -43,7 +44,7 @@ void main() {
     vec3 material = mesh.material_texture_id == -1? vec3(0, rough, metal) : texture(materialSampler[mesh.material_texture_id], inTexcoord).rgb;
 
 
-    vec3 light_color = vec3(0.6); 
+    vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
     
 

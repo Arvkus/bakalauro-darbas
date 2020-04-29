@@ -108,6 +108,7 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
+	alignas(4) float exposure = 0.3;
 };
 
 struct Properties{

@@ -187,10 +187,7 @@ public:
         create_buffers(instance);
         for(Node& node : nodes) node.update_dynamic_buffer(descriptors);
         for(Node& node : nodes) node.get_draw_info(infos);
-        for(Node& node : nodes) node.iterate();
-
-        // prepare dynamic buffer
-        // create mesh materials
+        //for(Node& node : nodes) node.iterate();
     }
 
     // 3
