@@ -65,7 +65,7 @@ public:
         skybox = loader.load_glb("models/cube.glb");
         skybox.prepare_model(&this->instance, &this->descriptors);
         
-        model = loader.load_glb("models/complex.glb");
+        model = loader.load_glb("models/tests/BoomBox.glb");
         model.prepare_model(&this->instance, &this->descriptors);
 
         camera.set_region(model.get_region());
