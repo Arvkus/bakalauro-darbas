@@ -47,8 +47,8 @@
 // Globals
 
 const uint32_t MAX_OBJECTS = 256;
-const uint32_t MAX_IMAGES = 64;
-const uint32_t MAX_IMAGE_SIZE = 256;
+const uint32_t MAX_IMAGES = 32;
+const uint32_t MAX_IMAGE_SIZE = 512;
 const uint32_t DYNAMIC_DESCRIPTOR_SIZE = 256;
 
 bool APP_DEBUG = false;

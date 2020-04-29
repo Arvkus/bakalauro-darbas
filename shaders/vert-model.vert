@@ -16,6 +16,7 @@ layout(binding = 0) uniform Mesh {
     float metalliness;
     int albedo_texture_id;
     int material_texture_id;
+    vec3 base_color;
 } mesh;
 
 layout(binding = 1) uniform UniformBufferObject {

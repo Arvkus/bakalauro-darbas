@@ -14,10 +14,12 @@ layout(binding = 0) uniform Mesh {
     float metalliness;
     int albedo_texture_id;
     int material_texture_id;
+    vec3 base_color;
 } mesh;
 
 layout(binding = 2) uniform sampler2D colorSampler[32];
 layout(binding = 3) uniform sampler2D enviromentSampler;
+layout(binding = 4) uniform sampler2D materialSampler[32];
 
 vec2 sample_spherical_map(vec3 v)
 {
@@ -33,9 +35,9 @@ void main() {
     float gamma = 1;
     float exposure = 0.3;
     
-    vec3 albedo = mesh.albedo_texture_id == -1? vec3(1.0) : texture(colorSampler[mesh.albedo_texture_id], inTexcoord).rgb;
+    vec3 albedo = mesh.albedo_texture_id == -1? mesh.base_color : texture(colorSampler[mesh.albedo_texture_id], inTexcoord).rgb;
 
-    vec3 light_color = vec3(1.0); 
+    vec3 light_color = vec3(0.6); 
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
     
     float rough = mesh.roughness;

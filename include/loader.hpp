@@ -32,14 +32,14 @@ private:
     struct Counter{
         uint32_t mesh = 0;
         uint32_t albedo_texture = 0;
-        uint32_t metal_roughness_texture = 0;
+        uint32_t metallic_roughness_texture = 0;
         uint32_t indices = 0;
         uint32_t vertices = 0;
 
         void reset(){
             this->mesh = 0;
             this->albedo_texture = 0;
-            this->metal_roughness_texture = 0;
+            this->metallic_roughness_texture = 0;
             this->indices = 0;
             this->vertices = 0;
         }
@@ -225,18 +225,28 @@ private:
             // pbr textures
             if(is(pbr,"baseColorTexture")){
                 uint32_t texture_index = pbr["baseColorTexture"]["index"];
-                std::vector<char> pixels = get_texture_pixels(texture_index);
+                mesh_material.albedo_pixels = get_texture_pixels(texture_index);
+                mesh_material.albedo_texture_id = counter.albedo_texture;
+                counter.albedo_texture++;
             }
 
             if(is(pbr,"metallicRoughnessTexture")){
                 uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
-                std::vector<char> pixels = get_texture_pixels(texture_index);
+                mesh_material.metallic_roughness_pixels = get_texture_pixels(texture_index);
+                mesh_material.metallic_roughness_texture_id = counter.metallic_roughness_texture;
+                counter.metallic_roughness_texture++;
             }
 
             // pbr vertices
-            if(is(pbr,"baseColorFactor")) {};
-            if(is(pbr,"metallicFactor")) {};
-            if(is(pbr,"roughnessrFactor")) {};
+            if(is(pbr,"baseColorFactor")) { 
+                mesh_material.base_color = glm::vec3(pbr["baseColorFactor"][0], pbr["baseColorFactor"][1], pbr["baseColorFactor"][2]);
+            }
+            if(is(pbr,"metallicFactor")) {
+                mesh_material.metalliness = pbr["metallicFactor"];
+            }
+            if(is(pbr,"roughnessFactor")) {
+                mesh_material.roughness = pbr["roughnessFactor"];
+            }
         } // pbr
 
         return mesh_material;

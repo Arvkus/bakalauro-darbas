@@ -9,6 +9,7 @@ struct UniformMeshStruct{
     alignas(4) float metalliness = 0.0;
     alignas(4) int32_t albedo_texture_id = -1; // -1; means no texture
     alignas(4) int32_t metal_roughness_texture_id = -1; // -1; means no texture
+    alignas(16) glm::vec3 base_color = glm::vec3(1.0);
     // R Metallic
     // G Roughness
     // B -
@@ -20,12 +21,13 @@ struct Material{
     std::vector<char> albedo_pixels;
     std::vector<char> normal_pixels;
 
-    int32_t metal_roughness_texture_id = -1;
+    int32_t metallic_roughness_texture_id = -1;
     int32_t albedo_texture_id = -1;
     int32_t normal_texture_id = -1;
     
     float roughness = 1.0;
     float metalliness = 0.0;
+    glm::vec3 base_color = glm::vec3(1.0);
 };
 
 struct MeshDrawInfo{
@@ -35,7 +37,6 @@ struct MeshDrawInfo{
 	uint32_t index_count = 0;
 	Region region;
 };
-
 
 class Mesh{
 public:
@@ -95,9 +96,29 @@ public:
     void update_dynamic_buffer(Descriptors *descriptors, glm::mat4 cframe_offset = glm::mat4(1.0))
     {
         cframe_offset *= this->cframe; 
-        for(Mesh& mesh : meshes){ 
+        for(Mesh& mesh : meshes)
+        { 
+            // uniform buffer
             UniformMeshStruct ums;
             ums.cframe = cframe_offset;
+            ums.metalliness = mesh.material.metalliness;
+            ums.roughness = mesh.material.roughness;
+            ums.base_color = mesh.material.base_color;
+
+            // uniform samplers
+            ums.albedo_texture_id = mesh.material.albedo_texture_id;
+            ums.metal_roughness_texture_id = mesh.material.metallic_roughness_texture_id;
+
+            if(mesh.material.albedo_texture_id != -1)
+            {
+                uint32_t tex = mesh.material.albedo_texture_id;
+                VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+                descriptors->color_image_pool[tex].destroy();
+                descriptors->color_image_pool[tex].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+                descriptors->color_image_pool[tex].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.material.albedo_pixels.data());
+                descriptors->color_image_pool[tex].create_image_view(format, VK_IMAGE_ASPECT_COLOR_BIT);
+            }
+
             descriptors->dynamic_uniform_buffer.fill_memory(&ums, sizeof(UniformMeshStruct), DYNAMIC_DESCRIPTOR_SIZE * mesh.id );
         }
 
@@ -111,7 +132,7 @@ public:
         
         for(Mesh& mesh : meshes){ 
             gap(depth+1); 
-            msg::printl(mesh.name," | ", mesh.id, " | ", mesh.voffset, " | ", mesh.ioffset); 
+            msg::printl(mesh.name," | ", mesh.id, " | ", mesh.material.albedo_texture_id, " | ", mesh.material.metallic_roughness_texture_id); 
         }
 
         for(Node& node : children) node.iterate(depth+1);
@@ -156,7 +177,7 @@ public:
         create_buffers(instance);
         for(Node& node : nodes) node.update_dynamic_buffer(descriptors);
         for(Node& node : nodes) node.get_draw_info(infos);
-        //for(Node& node : nodes) node.iterate();
+        for(Node& node : nodes) node.iterate();
 
         // prepare dynamic buffer
         // create mesh materials

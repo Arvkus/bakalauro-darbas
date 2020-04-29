@@ -22,7 +22,7 @@ public:
 
         
         for(uint32_t i = 0; i < MAX_IMAGES; i++){
-            image_pool[i].destroy();
+            color_image_pool[i].destroy();
         }
         
         uniform_buffer.destroy();
@@ -37,21 +37,30 @@ public:
     Buffer dynamic_uniform_buffer;
     VkDescriptorSet descriptor_sets;
 
-    std::array<Image, MAX_IMAGES> image_pool;
+    std::array<Image, MAX_IMAGES> color_image_pool;
+    std::array<Image, MAX_IMAGES> material_image_pool;
+
     void create_texture_array()
     {
+        // load default img
         int width = 0, height = 0, channel = 0;
         stbi_uc* pixels = stbi_load("textures/placeholder.png", &width, &height, &channel, STBI_rgb_alpha);
         if(!pixels) throw std::runtime_error("failed to load texture image!");
 
+        // resize default img
         stbi_uc* new_pixels = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
         stbir_resize_uint8(pixels, width , height , 0, new_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
 
         for(uint32_t i = 0; i < MAX_IMAGES; i++){
-            image_pool[i].init(this->instance);
-            image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-            image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, new_pixels);
-            image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+            color_image_pool[i].init(this->instance);
+            color_image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+            color_image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, new_pixels);
+            color_image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+
+            material_image_pool[i].init(this->instance);
+            material_image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+            material_image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, new_pixels);
+            material_image_pool[i].create_image_view(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
         }
 
         stbi_image_free(new_pixels);
@@ -87,7 +96,7 @@ public:
         for (uint32_t i = 0; i < MAX_IMAGES; ++i)
         {
             imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfos[i].imageView = image_pool[i].image_view; // this->diffuse->image_view; //
+            imageInfos[i].imageView = color_image_pool[i].image_view; // this->diffuse->image_view; //
             imageInfos[i].sampler = texture_sampler;
         }
 

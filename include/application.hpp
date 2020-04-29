@@ -204,7 +204,7 @@ private:
         ubo.model = glm::mat4(1.0);
         ubo.view = camera.cframe(); //glm::translate(glm::mat4(1.0), glm::vec3(0,0,-20));
 
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.05f, 1200.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.02f, 1000.0f);
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
 
