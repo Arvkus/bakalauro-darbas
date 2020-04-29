@@ -24,19 +24,21 @@ public:
     float scroll_speed = 1;
     float distance = 20;
 
-    int yaw   = 0;
-    int pitch = 0; 
+    int yaw   = 45;
+    int pitch = 45; 
     int roll  = 0;
 
     //----------------------------------------------
 
     glm::mat4 cframe(){ return calculate_cframe(); }
 
-    void set_region(glm::vec3 min, glm::vec3 max)
+    void set_region(Region r)
     {
-        origin = glm::vec3(0);
-        distance = std::max(max.length(), min.length()) ;
+        origin = (r.max + r.min) / 2;
+        distance = glm::distance(r.max, r.min) * 1.5; // 2 / glm::tan( glm::radians(22.5) );
         scroll_speed = distance/10;
+        speed = distance/80;
+        msg::warn(r.max, r.min);
     }
     
     void move()

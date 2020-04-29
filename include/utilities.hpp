@@ -121,8 +121,8 @@ struct Region{
 		this->max = max;
 	}
 
-	glm::vec3 min;
-	glm::vec3 max;
+	glm::vec3 min = glm::vec3(0);
+	glm::vec3 max = glm::vec3(0);
 };
 
 // alignas(); // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout

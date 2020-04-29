@@ -1,20 +1,14 @@
 #include "common.hpp"
 #include "descriptors.hpp"
 
-/* TODO:
-set correct camera speed, position
-declutter draw function
-prepare presentation (BD)
-*/
+// https://archive.org/embed/GDC2014Bilodeau
 
-// // https://archive.org/embed/GDC2014Bilodeau
 struct UniformMeshStruct{
     alignas(16) glm::mat4 cframe = glm::mat4(1.0);
     alignas(4) float roughness = 1.0;
     alignas(4) float metalliness = 0.0;
     alignas(4) int32_t albedo_texture_id = -1; // -1; means no texture
-    alignas(4) int32_t material_texture_id = -1; // -1; means no texture
-    alignas(4) int32_t mesh_id = -1; // -1; means no mesh, empty
+    alignas(4) int32_t metal_roughness_texture_id = -1; // -1; means no texture
     // R Metallic
     // G Roughness
     // B -
@@ -25,7 +19,23 @@ struct Material{
     std::vector<char> metallic_roughness_pixels;
     std::vector<char> albedo_pixels;
     std::vector<char> normal_pixels;
+
+    int32_t metal_roughness_texture_id = -1;
+    int32_t albedo_texture_id = -1;
+    int32_t normal_texture_id = -1;
+    
+    float roughness = 1.0;
+    float metalliness = 0.0;
 };
+
+struct MeshDrawInfo{
+    uint32_t id = 0;
+	uint32_t vertex_offset = 0;
+	uint32_t index_offset = 0;
+	uint32_t index_count = 0;
+	Region region;
+};
+
 
 class Mesh{
 public:
@@ -49,13 +59,6 @@ public:
     std::vector<Node> children;
     std::vector<Mesh> meshes;
 
-    struct VulkanObjects{
-        VkPipelineLayout *layout;
-        VkDescriptorSet *descriptor_set;
-        Buffer *indices;
-        Buffer *vertices;
-    } vk;
-
     void fill_buffers(Buffer* indices, Buffer* vertices)
     {
         VkDeviceSize size;
@@ -69,37 +72,37 @@ public:
         for(Node& node : children) node.fill_buffers(indices, vertices);
     }
 
-    void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors, Buffer *indices, Buffer *vertices, glm::mat4 cframe_offset = glm::mat4(1.0))
+    void get_draw_info(std::vector<MeshDrawInfo>& infos, glm::mat4 cframe_offset = glm::mat4(1.0))
     {
         cframe_offset *= this->cframe; 
-        for(Mesh& mesh : meshes){
 
-            UniformMeshStruct ums;
-            
-            ums.cframe = cframe_offset;
-            mesh.region = Region(
+        for(Mesh& mesh : meshes){ 
+            MeshDrawInfo info;
+            info.id = mesh.id;
+            info.index_offset = mesh.ioffset;
+            info.vertex_offset = mesh.voffset;
+            info.index_count = mesh.indices.size();
+            info.region = Region(
                 cframe_offset * glm::vec4(mesh.region.max.x, mesh.region.max.y, mesh.region.max.z, 1.0),
                 cframe_offset * glm::vec4(mesh.region.min.x, mesh.region.min.y, mesh.region.min.z, 1.0)
             );
-
-            msg::error(mesh.region.max - mesh.region.min);
-            descriptors->dynamic_uniform_buffer.fill_memory(&ums, sizeof(UniformMeshStruct), DYNAMIC_DESCRIPTOR_SIZE * mesh.id );
-
-            std::array<uint32_t, 1> dbo = { DYNAMIC_DESCRIPTOR_SIZE * mesh.id }; // dynamic buffer offset;
-            VkDeviceSize vertex_offset = 0;
-
-            vkCmdBindVertexBuffers(*cmd, 0, 1, &vertices->buffer, &vertex_offset);
-            vkCmdBindIndexBuffer(*cmd, indices->buffer, 0, VK_INDEX_TYPE_UINT32);
-
-            vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, &descriptors->descriptor_sets, 1, dbo.data());
-            vkCmdDrawIndexed(*cmd, (uint32_t)mesh.indices.size(), 1, mesh.ioffset, mesh.voffset, 0);
+            infos.push_back(info);
         }
 
-        for(Node& node : children) node.draw(cmd, pipeline_layout, descriptors, indices, vertices, cframe_offset);
+        for(Node& node : children) node.get_draw_info(infos, cframe_offset);
     }
 
+    void update_dynamic_buffer(Descriptors *descriptors, glm::mat4 cframe_offset = glm::mat4(1.0))
+    {
+        cframe_offset *= this->cframe; 
+        for(Mesh& mesh : meshes){ 
+            UniformMeshStruct ums;
+            ums.cframe = cframe_offset;
+            descriptors->dynamic_uniform_buffer.fill_memory(&ums, sizeof(UniformMeshStruct), DYNAMIC_DESCRIPTOR_SIZE * mesh.id );
+        }
 
-
+        for(Node& node : children) node.update_dynamic_buffer(descriptors, cframe_offset);
+    }
 
     // debug ----------------------------------------------------
     void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
@@ -108,7 +111,7 @@ public:
         
         for(Mesh& mesh : meshes){ 
             gap(depth+1); 
-            msg::printl(mesh.name," | ", " ", " | ", mesh.voffset); 
+            msg::printl(mesh.name," | ", mesh.id, " | ", mesh.voffset, " | ", mesh.ioffset); 
         }
 
         for(Node& node : children) node.iterate(depth+1);
@@ -122,11 +125,6 @@ private:
     Image material_buffer;
     Buffer indices;
     Buffer vertices;
-
-public:
-    uint32_t total_indices_size = 0;
-    uint32_t total_vertices_size = 0;
-    std::vector<Node> nodes;
 
     // 1
     void create_buffers(Instance* instance)
@@ -142,13 +140,24 @@ public:
         vertices.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         for(Node& node : nodes) node.fill_buffers(&indices, &vertices);
-        for(Node& node : nodes) node.iterate();
         msg::success("model buffers created");
     }
 
+public:
+    uint32_t total_indices_size = 0;
+    uint32_t total_vertices_size = 0;
+    
+    std::vector<Node> nodes;
+    std::vector<MeshDrawInfo> infos;
+
     // 2
-    void prepare_model(){
-        // transform vertices based on node cframe
+    void prepare_model(Instance* instance, Descriptors* descriptors)
+    {
+        create_buffers(instance);
+        for(Node& node : nodes) node.update_dynamic_buffer(descriptors);
+        for(Node& node : nodes) node.get_draw_info(infos);
+        //for(Node& node : nodes) node.iterate();
+
         // prepare dynamic buffer
         // create mesh materials
     }
@@ -156,12 +165,43 @@ public:
     // 3
     void draw(VkCommandBuffer* cmd, VkPipelineLayout *pipeline_layout, Descriptors *descriptors)
     {
-        for(Node& node : nodes) node.draw(cmd, pipeline_layout, descriptors, &indices, &vertices);
+        for(MeshDrawInfo& info : infos){
+            std::array<uint32_t, 1> dbo = { DYNAMIC_DESCRIPTOR_SIZE * info.id }; // dynamic buffer offset;
+            VkDeviceSize vertex_offset = 0;
+
+            vkCmdBindVertexBuffers(*cmd, 0, 1, &vertices.buffer, &vertex_offset);
+            vkCmdBindIndexBuffer(*cmd, indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+            vkCmdBindDescriptorSets(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline_layout, 0, 1, &descriptors->descriptor_sets, 1, dbo.data());
+            vkCmdDrawIndexed(*cmd, info.index_count, 1, info.index_offset, info.vertex_offset, 0);
+        }
     }
 
-
-
     // 4
-    void destroy(){}
+    void destroy(){
+        vertices.destroy();
+        indices.destroy();
+
+    }
+
+    //------------------------------------
+    /// combined mesh region
+
+    Region get_region()
+    {
+        Region r = infos[0].region;
+        for(MeshDrawInfo& info : infos)
+        {
+            //msg::success(info.region.max, info.region.min);
+            r.max.x = r.max.x > info.region.max.x? r.max.x : info.region.max.x;
+            r.max.y = r.max.y > info.region.max.y? r.max.y : info.region.max.y;
+            r.max.z = r.max.z > info.region.max.z? r.max.z : info.region.max.z;
+
+            r.min.x = r.min.x < info.region.min.x? r.min.x : info.region.min.x;
+            r.min.y = r.min.y < info.region.min.y? r.min.y : info.region.min.y;
+            r.min.z = r.min.z < info.region.min.z? r.min.z : info.region.min.z;
+        }
+        return r;
+    }
 };
 

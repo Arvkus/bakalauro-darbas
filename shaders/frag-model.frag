@@ -14,7 +14,6 @@ layout(binding = 0) uniform Mesh {
     float metalliness;
     int albedo_texture_id;
     int material_texture_id;
-    int mesh_id;
 } mesh;
 
 layout(binding = 2) uniform sampler2D colorSampler[32];

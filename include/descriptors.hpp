@@ -21,7 +21,7 @@ public:
         vkDestroyDescriptorSetLayout(instance->device, descriptor_set_layout, nullptr);
 
         
-        for(uint32_t i = 0; i < MAX_OBJECTS; i++){
+        for(uint32_t i = 0; i < MAX_IMAGES; i++){
             image_pool[i].destroy();
         }
         
@@ -37,7 +37,7 @@ public:
     Buffer dynamic_uniform_buffer;
     VkDescriptorSet descriptor_sets;
 
-    std::array<Image, MAX_OBJECTS> image_pool;
+    std::array<Image, MAX_IMAGES> image_pool;
     void create_texture_array()
     {
         int width = 0, height = 0, channel = 0;
@@ -45,10 +45,9 @@ public:
         if(!pixels) throw std::runtime_error("failed to load texture image!");
 
         stbi_uc* new_pixels = (stbi_uc*) malloc(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
-        stbir_resize_uint8(pixels, width , height , 0,
-            new_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
+        stbir_resize_uint8(pixels, width , height , 0, new_pixels, MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
 
-        for(uint32_t i = 0; i < MAX_OBJECTS; i++){
+        for(uint32_t i = 0; i < MAX_IMAGES; i++){
             image_pool[i].init(this->instance);
             image_pool[i].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
             image_pool[i].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, new_pixels);
@@ -84,8 +83,8 @@ public:
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
         
-        VkDescriptorImageInfo imageInfos[MAX_OBJECTS];
-        for (uint32_t i = 0; i < MAX_OBJECTS; ++i)
+        VkDescriptorImageInfo imageInfos[MAX_IMAGES];
+        for (uint32_t i = 0; i < MAX_IMAGES; ++i)
         {
             imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfos[i].imageView = image_pool[i].image_view; // this->diffuse->image_view; //
@@ -120,7 +119,7 @@ public:
         descriptorWrites[2].dstBinding = 2;
         descriptorWrites[2].dstArrayElement = 0;
         descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[2].descriptorCount = MAX_OBJECTS; 
+        descriptorWrites[2].descriptorCount = MAX_IMAGES; 
         descriptorWrites[2].pImageInfo = imageInfos;
         
         descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -217,7 +216,7 @@ private:
 
         VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
         samplerLayoutBinding.binding = 2;
-        samplerLayoutBinding.descriptorCount = MAX_OBJECTS; // array of images
+        samplerLayoutBinding.descriptorCount = MAX_IMAGES; // array of images
         samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         

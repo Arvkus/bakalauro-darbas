@@ -213,6 +213,37 @@ private:
 
     //----------------------------------------------------
 
+    Material get_material(uint32_t material_id, int depth = 0)
+    {
+        Material mesh_material;
+        json material = content["materials"][material_id];
+        gap(depth); msg::printl(material["name"]);
+
+        if(is(material,"pbrMetallicRoughness")){
+            json pbr = material["pbrMetallicRoughness"];
+
+            // pbr textures
+            if(is(pbr,"baseColorTexture")){
+                uint32_t texture_index = pbr["baseColorTexture"]["index"];
+                std::vector<char> pixels = get_texture_pixels(texture_index);
+            }
+
+            if(is(pbr,"metallicRoughnessTexture")){
+                uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
+                std::vector<char> pixels = get_texture_pixels(texture_index);
+            }
+
+            // pbr vertices
+            if(is(pbr,"baseColorFactor")) {};
+            if(is(pbr,"metallicFactor")) {};
+            if(is(pbr,"roughnessrFactor")) {};
+        } // pbr
+
+        return mesh_material;
+    }
+
+    //----------------------------------------------------
+
     std::vector<Mesh> build_meshes(uint32_t mesh_id, uint32_t depth = 0)
     {
         std::vector<Mesh> model_meshes;
@@ -246,31 +277,8 @@ private:
             if(is(primitive, "material"))
             {
                 uint32_t material_id = primitive["material"];
-                json material = content["materials"][material_id];
-                gap(depth); msg::printl(material["name"]);
-
-
-                if(is(material,"pbrMetallicRoughness")){
-                    json pbr = material["pbrMetallicRoughness"];
-
-                    // pbr textures
-                    if(is(pbr,"baseColorTexture")){
-                        uint32_t texture_index = pbr["baseColorTexture"]["index"];
-                        std::vector<char> pixels = get_texture_pixels(texture_index);
-                    }
-
-                    if(is(pbr,"metallicRoughnessTexture")){
-                        uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
-                        std::vector<char> pixels = get_texture_pixels(texture_index);
-                    }
-
-                    // pbr vertices
-                    if(is(pbr,"baseColorFactor")) {};
-                    if(is(pbr,"metallicFactor")) {};
-                    if(is(pbr,"roughnessrFactor")) {};
-                } // pbr
-
-            } // material
+                model_mesh.material = get_material(material_id, depth);
+            } 
 
             this->counter.mesh++;
             model_meshes.push_back(model_mesh);

@@ -13,6 +13,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/scalar_multiplication.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
@@ -45,7 +46,8 @@
 //-----------------------------------------
 // Globals
 
-const uint32_t MAX_OBJECTS = 126;
+const uint32_t MAX_OBJECTS = 256;
+const uint32_t MAX_IMAGES = 64;
 const uint32_t MAX_IMAGE_SIZE = 256;
 const uint32_t DYNAMIC_DESCRIPTOR_SIZE = 256;
 

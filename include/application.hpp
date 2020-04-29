@@ -31,7 +31,7 @@ public:
 
     void draw()
     {
-        //if(is_model_update()) return;  // do not render while model is loading
+        if(is_model_update()) return;  // do not render while model is loading
         if(RECREATE_SWAPCHAIN) return; // do not render while swapchain is recreating
 
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
@@ -63,17 +63,12 @@ public:
         Loader loader = Loader();
         
         skybox = loader.load_glb("models/cube.glb");
-        skybox.create_buffers(&this->instance);
-        //skybox.create_material(&this->descriptors);
+        skybox.prepare_model(&this->instance, &this->descriptors);
         
-        
-        
-        model = loader.load_glb("models/tests/duck.glb");
-        model.create_buffers(&this->instance);
-        //model.create_material(&this->descriptors);
+        model = loader.load_glb("models/complex.glb");
+        model.prepare_model(&this->instance, &this->descriptors);
 
-        //msg::printl(model.min, model.max);
-        camera.set_region(glm::vec3(1), glm::vec3(-1));
+        camera.set_region(model.get_region());
        
 
         //car = loader.load_glb("models/car.glb");
@@ -159,7 +154,7 @@ private:
     Image texture_image;
 
     //---------------------------------------------------------------------------------
-    /*
+    
     bool is_model_update()
     {
         if(Input::Keys::L == false) return false;
@@ -178,11 +173,9 @@ private:
             
             Loader loader = Loader();
             model = loader.load_glb(f.result()[0].c_str());
-            model.create_buffers(&this->instance);
-            model.create_material(&this->descriptors);
+            model.prepare_model(&this->instance, &this->descriptors);
 
-            msg::printl(model.min, model.max);
-            camera.set_region(model.min, model.max);
+            camera.set_region(model.get_region());
 
             this->descriptors.create_descriptor_sets();
             create_command_pool();
@@ -193,7 +186,7 @@ private:
         }
         return false;
     }
-    */
+    
 
     //---------------------------------------------------------------------------------
 
@@ -211,7 +204,7 @@ private:
         ubo.model = glm::mat4(1.0);
         ubo.view = camera.cframe(); //glm::translate(glm::mat4(1.0), glm::vec3(0,0,-20));
 
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 1000.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.05f, 1200.0f);
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
 
 
@@ -285,7 +278,6 @@ private:
 
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
             model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
-            msg::printl();
             
             //------------------------------------------
             vkCmdEndRenderPass(command_buffers[i]);
