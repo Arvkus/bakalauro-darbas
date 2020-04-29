@@ -68,7 +68,7 @@ public:
         
         
         
-        model = loader.load_glb("models/hierarchy.glb");
+        model = loader.load_glb("models/tests/duck.glb");
         model.create_buffers(&this->instance);
         //model.create_material(&this->descriptors);
 
@@ -285,6 +285,7 @@ private:
 
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
             model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
+            msg::printl();
             
             //------------------------------------------
             vkCmdEndRenderPass(command_buffers[i]);

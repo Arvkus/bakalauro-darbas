@@ -20,6 +20,15 @@ private:
         uint32_t length;
     };
 
+    glm::mat4 construct_cframe(glm::vec3 translation, glm::quat rotation, glm::vec3 scale){
+        // translate, rotate, scale
+        glm::mat4 matrix = glm::mat4(1.0);
+        matrix = glm::translate(matrix, translation); // translate
+        matrix = matrix * glm::toMat4(rotation); // rotate
+        matrix = glm::scale(matrix, scale); // scale
+        return matrix;
+    }
+
     struct Counter{
         uint32_t mesh = 0;
         uint32_t albedo_texture = 0;
@@ -77,6 +86,23 @@ private:
     }
 
     //----------------------------------------------------
+    // get min/max
+    Region get_region(const json& primitive)
+    {
+        Region r;
+        try{
+            uint32_t accessor_id = primitive["attributes"]["POSITION"];
+            json accessor = content["accessors"][accessor_id];
+
+            r.min = glm::vec3( accessor["min"][0], accessor["min"][1], accessor["min"][2]);
+            r.max = glm::vec3( accessor["max"][0], accessor["max"][1], accessor["max"][2]);
+        }catch(const json::exception& e){
+            msg::warn(std::string("Failed to get region: ") + e.what());
+        }
+        return r;
+    }
+
+    //----------------------------------------------------
     // get vertices
 
     std::vector<uint32_t> create_indices(const json& primitive)
@@ -125,6 +151,7 @@ private:
         memory = get_memory_info(accessor_id);
         normals.resize(memory.length / memory.stride);
 
+        
         for(uint32_t i = 0; i < normals.size(); i++){
             std::memcpy(&normals[i], buffer.data() + memory.offset + i*memory.stride, memory.stride);
         }
@@ -204,6 +231,7 @@ private:
             // vertices, indices
             model_mesh.indices = create_indices(primitive);
             model_mesh.vertices = create_vertices(primitive);
+            model_mesh.region = get_region(primitive);
             
             model_mesh.id = this->counter.mesh;
             model_mesh.ioffset = this->counter.indices;
@@ -261,6 +289,34 @@ private:
             Node model_node;
             json node = content["nodes"][node_id];
 
+            if(is(node, "matrix"))
+            {
+                std::array<float, 16> nums = node["matrix"];
+                model_node.cframe = glm::make_mat4(nums.data());
+            }
+            else
+            {
+                glm::vec3 translation = is(node, "translation")? glm::vec3( 
+                    node["translation"][0],
+                    node["translation"][1],
+                    node["translation"][2]
+                ) : glm::vec3(0);
+
+                glm::quat rotation = is(node, "rotation")? glm::quat( 
+                    node["rotation"][3],
+                    node["rotation"][0],
+                    node["rotation"][1],
+                    node["rotation"][2]
+                ) : glm::quat(1,0,0,0);
+
+                glm::vec3 scale = is(node, "scale")? glm::vec3( 
+                    node["scale"][0],
+                    node["scale"][1],
+                    node["scale"][2]
+                ) : glm::vec3(1);
+
+                model_node.cframe = construct_cframe(translation, rotation, scale);
+            }
 
             model_node.name = is(node,"name")? node["name"] : "node";
             gap(depth); msg::highlight(model_node.name); // debug

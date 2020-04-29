@@ -114,6 +114,17 @@ struct Properties{
 	float exposure;
 };
 
+struct Region{
+	Region(){};
+	Region(glm::vec3 min, glm::vec3 max){
+		this->min = min;
+		this->max = max;
+	}
+
+	glm::vec3 min;
+	glm::vec3 max;
+};
+
 // alignas(); // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout
 // scalar - byte size (uint16 2, uint32 4, float 4, double 8)
 // vec2 - 8

@@ -10,14 +10,14 @@ layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outPosition;
 layout(location = 3) out vec3 outViewPos;
 
-layout(binding = 0) uniform Material {
+layout(binding = 0) uniform Mesh {
+    mat4 cframe;
     float roughness;
     float metalliness;
-	int is_diffuse_color;
-    int texture_id;
-	vec4 diffuse_color;
-    mat4 model; // model position
-} material;
+    int albedo_texture_id;
+    int material_texture_id;
+    int mesh_id;
+} mesh;
 
 layout(binding = 1) uniform UniformBufferObject {
     mat4 model;
@@ -29,13 +29,13 @@ vec3 center  = vec3(0.0);
 
 void main() {
     mat4 v = inverse(ubo.view); // camera world space
-    mat4 m = material.model; // model world space
+    mat4 m = mesh.cframe; // model world space
 
     outTexcoord = inTexcoord;
 
-    outNormal = mat3(material.model) * inNormal;  // transpose(inverse(material.model))
+    outNormal = mat3(mesh.cframe) * inNormal;  // transpose(inverse(material.model))
     outPosition = vec3( m * vec4(inPosition, 1.0) ); //vec3(m[3][0], m[3][1], m[3][2]);
     outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
 
-    gl_Position = ubo.proj * ubo.view * vec4(inPosition, 1.0);
+    gl_Position = ubo.proj * ubo.view * mesh.cframe * vec4(inPosition, 1.0);
 }
