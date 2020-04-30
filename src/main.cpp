@@ -108,13 +108,3 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 
 }
-/*
-https://github.com/SaschaWillems/Vulkan/blob/master/examples/hdr/hdr.cpp
-vk_sharing_mode_
-
-https://streamable.com/us243l
-shaderSampledImageArrayDynamicIndexing 
-vkCmdPushConstants()
-https://www.reddit.com/r/vulkan/comments/86tna1/question_about_descriptor_sets/
-https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
-*/

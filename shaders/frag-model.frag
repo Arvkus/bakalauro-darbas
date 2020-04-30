@@ -39,15 +39,12 @@ void main() {
     float rough = mesh.roughness;
     float metal = mesh.metalliness;
 
-
     vec3 albedo = mesh.albedo_texture_id == -1? mesh.base_color : texture(colorSampler[mesh.albedo_texture_id], inTexcoord).rgb;
     vec3 material = mesh.material_texture_id == -1? vec3(0, rough, metal) : texture(materialSampler[mesh.material_texture_id], inTexcoord).rgb;
-
 
     vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
     
-
     //-------------------------------
     // ambient color;
     vec3 ambient_color = light_color * 0.01;

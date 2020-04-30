@@ -41,7 +41,6 @@ struct MeshDrawInfo{
 class Mesh{
 public:
     std::string name = "mesh";
-    glm::mat4 cframe = glm::mat4(1.0);
 
     std::vector<uint32_t> indices;
     std::vector<Vertex> vertices;

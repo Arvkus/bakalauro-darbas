@@ -413,7 +413,7 @@ public:
         pipelineInfo.renderPass = *render_pass;
         pipelineInfo.subpass = 0;
 
-        // required for switching between multiple pipelines
+        //required for switching between multiple pipelines
         //pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
         //pipelineInfo.basePipelineIndex = -1; // Optional
 
