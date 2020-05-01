@@ -50,6 +50,7 @@ public:
     {   
         this->instance.init(window);
         this->descriptors.init(&this->instance);
+        Descriptor::init(&this->instance);
 
         this->render_pass = create_render_pass(&this->instance);
         this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
@@ -71,6 +72,7 @@ public:
         camera.set_region(model.get_region());
 
         create_enviroment_buffer();
+
 
         //this->descriptors.bind_diffuse_image(&this->texture_image);
         this->descriptors.bind_enviroment_image(&this->enviroment_image);
@@ -150,6 +152,42 @@ private:
 
     //---------------------------------------------------------------------------------
     
+    void descriptor_test(){
+        
+
+        Descriptor md;
+        md.add(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1); // view
+        md.add(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // properties
+        md.add(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1); // mesh
+        md.add(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // enviroment
+        md.add(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // albedo
+        md.add(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // normal
+        md.add(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // material
+        md.add(7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // emission
+        // material (R - occlusion, G - roughness, B - metalliness)
+
+        VkDeviceSize size;
+        Buffer properties_ubo;
+        Buffer mesh_ubo;
+        Image albedo_ubo;
+        Image normal_ubo;
+        Image material_ubo;
+        Image emission_ubo;
+
+        /*
+        size = sizeof(UniformBufferObject);
+        uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    
+        size = DYNAMIC_DESCRIPTOR_SIZE * MAX_OBJECTS; // sizeof(Material) 
+        dynamic_uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    
+        printf("created uniform buffers \n");
+        */
+        //md.bind_buffer();
+
+        md.create();
+    }
+
     bool is_model_update()
     {
         if(Input::Keys::L == false) return false;
