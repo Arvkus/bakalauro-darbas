@@ -6,21 +6,17 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexcoord;
 
 layout(location = 0) out vec3 outUVW;
-layout(location = 1) out float outExposure;
 
-layout(binding = 1) uniform UniformBufferObject {
-    mat4 model;
+layout(binding = 0) uniform Camera {
     mat4 view;
     mat4 proj;
-    float exposure;
-} ubo;
+} camera;
 
 void main() {
     outUVW = inPosition;
-    outExposure = ubo.exposure;
 
-    mat4 viewPos = mat4(mat3(ubo.view));
-    vec4 clipPos = ubo.proj * viewPos * vec4(inPosition.xyz, 1.0);
+    mat4 viewPos = mat4(mat3(camera.view));
+    vec4 clipPos = camera.proj * viewPos * vec4(inPosition.xyz, 1.0);
 
     gl_Position = clipPos;
 }

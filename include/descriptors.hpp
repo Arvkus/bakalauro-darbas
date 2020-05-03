@@ -175,7 +175,7 @@ public:
 
         //---------------------------------------------------------
 
-        std::array<VkWriteDescriptorSet, 8> descriptorWrites = {};
+        std::array<VkWriteDescriptorSet, 4> descriptorWrites = {};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET; // view
         descriptorWrites[0].dstSet = descriptor_sets;
@@ -208,7 +208,7 @@ public:
         descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[3].descriptorCount = 1; 
         descriptorWrites[3].pImageInfo = &enviroment_info;
-
+        /*
         descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET; // albedo
         descriptorWrites[4].dstSet = descriptor_sets;
         descriptorWrites[4].dstBinding = 4;
@@ -240,6 +240,7 @@ public:
         descriptorWrites[7].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[7].descriptorCount = MAX_IMAGES; 
         descriptorWrites[7].pImageInfo = emission_info;
+        */
 
         //---------------------------------------------------------
 
@@ -283,7 +284,7 @@ private:
     void create_descriptor_set_layout()
     {
         // view, properties, mesh, enviroment, albedo, normal, material, emission
-        std::array<VkDescriptorSetLayoutBinding, 8> bindings;
+        std::array<VkDescriptorSetLayoutBinding, 4> bindings;
         for(uint32_t i =0; i < bindings.size(); i++) bindings[i] = {};
 
         bindings[0].binding = 0; // view
@@ -306,6 +307,7 @@ private:
         bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         bindings[3].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         
+        /*
         bindings[4].binding = 4; // albedo
         bindings[4].descriptorCount = MAX_IMAGES;
         bindings[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -326,6 +328,7 @@ private:
         bindings[7].descriptorCount = MAX_IMAGES;
         bindings[7].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         bindings[7].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        */
 
         VkDescriptorSetLayoutCreateInfo ci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         ci.bindingCount = (uint32_t)bindings.size();
@@ -341,7 +344,7 @@ private:
 
     void create_descriptor_pool()
     {
-        std::array<VkDescriptorPoolSize, 8> pool_sizes = {};
+        std::array<VkDescriptorPoolSize, 4> pool_sizes = {};
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // view
         pool_sizes[0].descriptorCount = 1;
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // properties
@@ -350,6 +353,7 @@ private:
         pool_sizes[2].descriptorCount = 1;
         pool_sizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // enviroment
         pool_sizes[3].descriptorCount = 1;
+        /*
         pool_sizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // albedo
         pool_sizes[4].descriptorCount = 1;
         pool_sizes[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // normal
@@ -358,6 +362,7 @@ private:
         pool_sizes[6].descriptorCount = 1;
         pool_sizes[7].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // emission
         pool_sizes[7].descriptorCount = 1;
+        */
 
         VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         poolInfo.poolSizeCount = (uint32_t)pool_sizes.size();

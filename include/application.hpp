@@ -9,23 +9,6 @@
 #include "camera.hpp"
 #include "loader.hpp"
 
-/*
-- render model mesh children
-- render meshes with material
-- console output upgrades
-- multiple model rendering
-- hdr skybox shader
-- pbr materials
-- pbr shaders
-- ambient occlusion
-- multisampling
-
-http://www.hdrlabs.com/sibl/archive.html
-https://learnopengl.com/PBR/IBL/Diffuse-irradiance
-*/
-
-
-// global illumination -> ambient occlusion
 class Application{
 public:
 
@@ -36,12 +19,11 @@ public:
 
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
         if(!next_image.has_value()) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
-        
+
         update_uniform_buffer(next_image.value());
         
         bool is_presented = swapchain.present_image(next_image.value());
         if(!is_presented) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
-        msg::printl("presented");
     }
 
     Model model;
@@ -75,10 +57,8 @@ public:
         this->descriptors.bind_enviroment_image(&this->enviroment_image);
         this->descriptors.create_descriptor_sets();
 
-        uint64_t start = timestamp_milli();
         create_command_pool();
         create_command_buffers();
-        msg::printl( (float)(timestamp_milli() - start)/1000  );
 
         this->swapchain.bind_command_buffers(this->command_buffers.data());
     }
@@ -145,45 +125,8 @@ private:
     std::vector<VkCommandBuffer> command_buffers;
 
     Image enviroment_image;
-    Image texture_image;
 
     //---------------------------------------------------------------------------------
-    /*
-    void descriptor_test(){
-        
-
-        Descriptor md;
-        md.add(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1); // view
-        md.add(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // properties
-        md.add(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1); // mesh
-        md.add(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // enviroment
-        md.add(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // albedo
-        md.add(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // normal
-        md.add(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // material
-        md.add(7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // emission
-        // material (R - occlusion, G - roughness, B - metalliness)
-
-        VkDeviceSize size;
-        Buffer properties_ubo;
-        Buffer mesh_ubo;
-        Image albedo_ubo;
-        Image normal_ubo;
-        Image material_ubo;
-        Image emission_ubo;
-        
-        size = sizeof(UniformBufferObject);
-        uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    
-        size = DYNAMIC_DESCRIPTOR_SIZE * MAX_OBJECTS; // sizeof(Material) 
-        dynamic_uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    
-        printf("created uniform buffers \n");
-        
-        //md.bind_buffer();
-
-        md.create();
-    }
-    */
 
     bool is_model_update()
     {
@@ -309,7 +252,7 @@ private:
             skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
             
             //------------------------------------------
-
+            
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
             model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
             

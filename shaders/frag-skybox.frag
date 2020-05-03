@@ -2,18 +2,14 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 inUVW;
-layout(location = 1) in float inExposure;
 
 layout(location = 0) out vec4 outColor;
-layout(binding = 0) uniform Material {
-    float roughness;
-	float metallines;
-	vec3 diffuse_color;
-} material;
 
-layout(binding = 2) uniform sampler2D texSampler;
-layout(binding = 3) uniform sampler2D enviromentSampler;
+layout(binding = 1) uniform Properties {
+    float exposure;
+} properties;
 
+layout(binding = 3) uniform sampler2D enviroment_sampler;
 
 vec2 sample_spherical_map(vec3 v)
 {
@@ -26,10 +22,10 @@ vec2 sample_spherical_map(vec3 v)
 
 void main() {
     vec2 uv = sample_spherical_map(normalize(inUVW)); // make sure to normalize localPos
-    vec3 color = texture(enviromentSampler, uv).rgb;
+    vec3 color = texture(enviroment_sampler, uv).rgb;
 
     const float gamma = 1;
-    const float exposure = inExposure;
+    const float exposure = 0.3; // inExposure;
   
     vec3 mapped = vec3(1.0) - exp(-color * exposure); // Exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 
