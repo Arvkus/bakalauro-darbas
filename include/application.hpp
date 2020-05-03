@@ -36,11 +36,12 @@ public:
 
         std::optional<uint32_t> next_image = swapchain.accquire_next_image();
         if(!next_image.has_value()) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
-
+        
         update_uniform_buffer(next_image.value());
         
         bool is_presented = swapchain.present_image(next_image.value());
         if(!is_presented) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
+        msg::printl("presented");
     }
 
     Model model;
@@ -50,7 +51,6 @@ public:
     {   
         this->instance.init(window);
         this->descriptors.init(&this->instance);
-        Descriptor::init(&this->instance);
 
         this->render_pass = create_render_pass(&this->instance);
         this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
@@ -72,9 +72,6 @@ public:
         camera.set_region(model.get_region());
 
         create_enviroment_buffer();
-
-
-        //this->descriptors.bind_diffuse_image(&this->texture_image);
         this->descriptors.bind_enviroment_image(&this->enviroment_image);
         this->descriptors.create_descriptor_sets();
 
@@ -151,7 +148,7 @@ private:
     Image texture_image;
 
     //---------------------------------------------------------------------------------
-    
+    /*
     void descriptor_test(){
         
 
@@ -173,8 +170,7 @@ private:
         Image normal_ubo;
         Image material_ubo;
         Image emission_ubo;
-
-        /*
+        
         size = sizeof(UniformBufferObject);
         uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     
@@ -182,11 +178,12 @@ private:
         dynamic_uniform_buffer.create_buffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     
         printf("created uniform buffers \n");
-        */
+        
         //md.bind_buffer();
 
         md.create();
     }
+    */
 
     bool is_model_update()
     {
@@ -233,19 +230,19 @@ private:
         float width = instance.surface.capabilities.currentExtent.width;
         float height = instance.surface.capabilities.currentExtent.height;
 
-        UniformBufferObject ubo = {};
-        ubo.model = glm::mat4(1.0);
+        UniformCameraStruct ubo = {};
         ubo.view = camera.cframe(); //glm::translate(glm::mat4(1.0), glm::vec3(0,0,-20));
-
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.02f, 1000.0f);
 
+        UniformPropertiesStruct properties; // ...
+
+        /*
         if(Input::Keys::Equal) this->exposure += this->exposure/20; ubo.exposure = this->exposure;
         if(Input::Keys::Minus) this->exposure -= this->exposure/20; ubo.exposure = this->exposure;
-        
         //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
+        */
 
-
-        descriptors.uniform_buffer.fill_memory(&ubo, sizeof(ubo));
+        descriptors.view_buffer.fill_memory(&ubo, sizeof(ubo));
     }
 
     //---------------------------------------------------------------------------------

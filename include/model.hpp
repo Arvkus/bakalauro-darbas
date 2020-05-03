@@ -107,16 +107,16 @@ public:
             // uniform samplers
             ums.albedo_texture_id = mesh.material.albedo_texture_id;
             ums.metal_roughness_texture_id = mesh.material.metallic_roughness_texture_id;
-
+            
+            /*
             if(mesh.material.albedo_texture_id != -1)
             {
                 uint32_t tex = mesh.material.albedo_texture_id;
                 VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-                descriptors->color_image_pool[tex].destroy();
-                descriptors->color_image_pool[tex].create_image(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-                descriptors->color_image_pool[tex].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.material.albedo_pixels.data());
-                descriptors->color_image_pool[tex].create_image_view(format, VK_IMAGE_ASPECT_COLOR_BIT);
+                descriptors->albedo.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.material.albedo_pixels.data(), tex);
+                descriptors->albedo_image_views[tex] = descriptors->albedo.return_image_view(tex);
             }
+            
             
             if(mesh.material.metallic_roughness_texture_id != -1)
             {
@@ -127,6 +127,7 @@ public:
                 descriptors->material_image_pool[tex].fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.material.metallic_roughness_pixels.data());
                 descriptors->material_image_pool[tex].create_image_view(format, VK_IMAGE_ASPECT_COLOR_BIT);
             }
+            */
 
             descriptors->dynamic_uniform_buffer.fill_memory(&ums, sizeof(UniformMeshStruct), DYNAMIC_DESCRIPTOR_SIZE * mesh.id );
         }

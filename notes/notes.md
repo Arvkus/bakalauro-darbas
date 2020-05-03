@@ -58,4 +58,14 @@ md.create_sets();
 ```cpp
 
 
+
 ```
+
+
+
+10h pradejo laseti
+13h skundimas
+
+nuo 11h vanduo nenaudojamas
+
+14h toletas nuleistas 1 karta

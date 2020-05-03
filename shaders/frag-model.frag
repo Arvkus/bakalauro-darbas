@@ -5,11 +5,14 @@ layout(location = 0) in vec2 inTexcoord;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inPosition;
 layout(location = 3) in vec3 inViewPos;
-layout(location = 4) in float inExposure;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 0) uniform Mesh {
+layout(binding = 1) uniform Properties {
+    float exposure;
+} properties;
+
+layout(binding = 2) uniform Mesh {
     mat4 cframe;
     float roughness;
     float metalliness;
@@ -18,9 +21,11 @@ layout(binding = 0) uniform Mesh {
     vec3 base_color;
 } mesh;
 
-layout(binding = 2) uniform sampler2D colorSampler[32];
-layout(binding = 3) uniform sampler2D enviromentSampler;
-layout(binding = 4) uniform sampler2D materialSampler[32];
+layout(binding = 3) uniform sampler2D enviroment_sampler;
+layout(binding = 4) uniform sampler2D albedo_sampler[32];
+layout(binding = 5) uniform sampler2D normal_sampler[32];
+layout(binding = 6) uniform sampler2D material_sampler[32];
+layout(binding = 7) uniform sampler2D emission_sampler[32];
 
 vec2 sample_spherical_map(vec3 v)
 {
@@ -34,13 +39,13 @@ vec2 sample_spherical_map(vec3 v)
 void main() {
     // proprties
     float gamma = 1;
-    float exposure = inExposure;
+    float exposure = .3;
     
     float rough = mesh.roughness;
     float metal = mesh.metalliness;
 
-    vec3 albedo = mesh.albedo_texture_id == -1? mesh.base_color : texture(colorSampler[mesh.albedo_texture_id], inTexcoord).rgb;
-    vec3 material = mesh.material_texture_id == -1? vec3(0, rough, metal) : texture(materialSampler[mesh.material_texture_id], inTexcoord).rgb;
+    vec3 albedo = mesh.albedo_texture_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_texture_id], inTexcoord).rgb;
+    vec3 material = mesh.material_texture_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_texture_id], inTexcoord).rgb;
 
     vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
@@ -62,7 +67,7 @@ void main() {
 
     // reflect color
     vec2 uv = sample_spherical_map( reflect(-I, inNormal) );
-    vec3 reflection_color = texture(enviromentSampler, uv).rgb;
+    vec3 reflection_color = texture(enviroment_sampler, uv).rgb;
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // gamma correction 
 

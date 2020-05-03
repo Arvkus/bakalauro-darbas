@@ -89,11 +89,11 @@ public:
 
     VkImage image;
     VkImageView image_view;
-    VkImageLayout current_layout;
+    //VkImageLayout current_layout;
 
-    void create_image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage)
+    void create_image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, uint32_t layers = 1)
     {
-        this->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        //this->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         VkImageCreateInfo ci = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         ci.imageType = VK_IMAGE_TYPE_2D;
@@ -103,8 +103,8 @@ public:
         ci.format = format;
         ci.usage = usage;
         ci.tiling = VK_IMAGE_TILING_OPTIMAL; // (or VK_IMAGE_TILING_LINEAR) efficient texel tiling
-        ci.initialLayout = this->current_layout;
-        ci.arrayLayers = 1;
+        ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // this->current_layout;
+        ci.arrayLayers = layers;
         ci.mipLevels = 1;
         ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         ci.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -128,17 +128,24 @@ public:
     }
 
 
-    void fill_memory(uint32_t width, uint32_t height, uint32_t channel, const void *source)
+    void fill_memory(uint32_t width, uint32_t height, uint32_t channel, const void *source, uint32_t img_index = 0)
     {   
-        VkDeviceSize size = width * height * channel; // RGBA - 4
+        VkDeviceSize size = width * height * channel;
         Buffer stage;
         stage.init(instance);
         stage.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         stage.fill_memory(source, size); // move image to prepared buffer (RAM)
- 
-        transition_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copy_buffer_to_image(stage.buffer, this->image, width, height); // move image to VRAM
-        transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        VkImageSubresourceRange range = {};
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        range.baseMipLevel = 0;
+        range.levelCount = 1;
+        range.baseArrayLayer = img_index;
+        range.layerCount = 1;
+  
+        transition_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+        copy_buffer_to_image(stage.buffer, this->image, width, height, img_index); // move image to VRAM
+        transition_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 
         stage.destroy();
     }
@@ -163,6 +170,26 @@ public:
 
     }
 
+    VkImageView return_image_view(uint32_t img_index)
+    {
+        VkImageView view;
+        VkImageViewCreateInfo ci = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        ci.image = image;
+        ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ci.format = VK_FORMAT_R8G8B8A8_SRGB;
+        ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        ci.subresourceRange.baseMipLevel = 0;
+        ci.subresourceRange.levelCount = 1;
+        ci.subresourceRange.baseArrayLayer = img_index;
+        ci.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(instance->device, &ci, nullptr, &view) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture image view!");
+        }
+        
+        return view;
+    }
+
     void destroy()
     {
         vkDestroyImageView(instance->device, image_view, nullptr);
@@ -173,11 +200,9 @@ public:
     //----------------------------------------------------------------------------------------------
 private:
 
-    void transition_layout(VkImageLayout new_layout, VkImageSubresourceRange range = {
-        VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
-    }){
+    void transition_layout(VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}){
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        barrier.oldLayout = current_layout;
+        barrier.oldLayout = old_layout;
         barrier.newLayout = new_layout;
 
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -198,14 +223,14 @@ private:
         VkPipelineStageFlags sourceStage;
         VkPipelineStageFlags destinationStage;
 
-        if (current_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) 
+        if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) 
         {
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         } 
-        else if (current_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) 
+        else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) 
         {
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -232,19 +257,21 @@ private:
         );
 
         this->instance->end_single_use_command(commandBuffer);
-        current_layout = new_layout;
+        //current_layout = new_layout;
     }
 
-    void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) 
-    {
+    void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t img_index = 0) 
+    {   
+        VkDeviceSize memory_offset = width * height * 4 * img_index;
+
         VkBufferImageCopy region = {};
-        region.bufferOffset = 0;
+        region.bufferOffset = 0; // memory_offset
         region.bufferRowLength = 0;
         region.bufferImageHeight = 0;
 
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.baseArrayLayer = img_index;
         region.imageSubresource.layerCount = 1;
 
         region.imageOffset = {0, 0, 0};

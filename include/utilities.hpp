@@ -104,14 +104,12 @@ struct Vertex
 
 //-------------------------------------------------------------------
 
-struct UniformBufferObject {
-    alignas(16) glm::mat4 model;
+struct UniformCameraStruct {
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
-	alignas(4) float exposure = 0.3;
 };
 
-struct Properties{
+struct UniformPropertiesStruct{
 	float exposure;
 };
 
