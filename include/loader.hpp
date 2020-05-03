@@ -2,8 +2,6 @@
 #include "common.hpp"
 using json = nlohmann::json;
 
-float test1 = 1.0;
-float test2 = 0.0;
 // https://wiki.fileformat.com/3d/glb/
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
 // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#properties-reference
@@ -11,8 +9,14 @@ float test2 = 0.0;
 
 class Loader{
 private:
+
+    enum TYPE { GLB, GLTF };
+
     json content; // json chunk
     std::vector<char> buffer; // binary chunk
+    std::string name; // for glTF
+    std::string folder;
+    TYPE type;
 
     struct MemoryInfo{ // get buffer binary data offset/size/stride 
         uint32_t offset;
@@ -31,17 +35,21 @@ private:
 
     struct Counter{
         uint32_t mesh = 0;
-        uint32_t albedo_texture = 0;
-        uint32_t metallic_roughness_texture = 0;
         uint32_t indices = 0;
         uint32_t vertices = 0;
+        uint32_t albedo_texture = 0;
+        uint32_t normal_texture = 0;
+        uint32_t material_texture = 0;
+        uint32_t emission_texture = 0;
 
         void reset(){
             this->mesh = 0;
-            this->albedo_texture = 0;
-            this->metallic_roughness_texture = 0;
             this->indices = 0;
             this->vertices = 0;
+            this->albedo_texture = 0;
+            this->normal_texture = 0;
+            this->material_texture = 0;
+            this->emission_texture = 0;
         }
     } counter;
 
@@ -189,20 +197,29 @@ private:
 
     std::vector<char> get_texture_pixels(uint32_t texture_index)
     {
+        int width = 0, height = 0, channel = 0;
+        stbi_uc* pixels;
+
         uint32_t source_index = content["textures"][texture_index]["source"];
         json image = content["images"][source_index];
-        
-        json buffer_view = content["bufferViews"][(uint32_t)image["bufferView"]];
-        uint32_t byte_length = buffer_view["byteLength"];
-        uint32_t byte_offset = is(buffer_view,"byteOffset")? buffer_view["byteOffset"] : 0;
 
-        int width = 0, height = 0, channel = 0;
-        stbi_uc* pixels = stbi_load_from_memory( 
-            reinterpret_cast<const stbi_uc*>(buffer.data()) + byte_offset, 
-            byte_length,
-            &width, &height, &channel,
-            STBI_rgb_alpha
-        );
+        if(this->type == TYPE::GLB)
+        {
+            json buffer_view = content["bufferViews"][(uint32_t)image["bufferView"]];
+            uint32_t byte_length = buffer_view["byteLength"];
+            uint32_t byte_offset = is(buffer_view,"byteOffset")? buffer_view["byteOffset"] : 0;
+
+            pixels = stbi_load_from_memory( 
+                reinterpret_cast<const stbi_uc*>(buffer.data()) + byte_offset, 
+                byte_length,
+                &width, &height, &channel,
+                STBI_rgb_alpha
+            );
+        }else if(this->type == TYPE::GLTF)
+        {
+            std::string uri = image["uri"];
+            pixels = stbi_load((this->folder + uri).c_str(), &width, &height, &channel, STBI_rgb_alpha);
+        }
 
         // resize and write to pixel buffer
         std::vector<char> pixel_buffer(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
@@ -213,43 +230,53 @@ private:
 
     //----------------------------------------------------
 
-    Material get_material(uint32_t material_id, int depth = 0)
+    void fill_material_data(uint32_t material_id, Mesh& mesh, int depth = 0)
     {
-        Material mesh_material;
         json material = content["materials"][material_id];
         gap(depth); msg::printl(material["name"]);
 
         if(is(material,"pbrMetallicRoughness")){
             json pbr = material["pbrMetallicRoughness"];
 
-            // pbr textures
+            // PBR textures
             if(is(pbr,"baseColorTexture")){
                 uint32_t texture_index = pbr["baseColorTexture"]["index"];
-                mesh_material.albedo_pixels = get_texture_pixels(texture_index);
-                mesh_material.albedo_texture_id = counter.albedo_texture;
-                counter.albedo_texture++;
+                mesh.pixels.albedo = get_texture_pixels(texture_index);
+                mesh.uniform.albedo_id = counter.albedo_texture++;
             }
 
             if(is(pbr,"metallicRoughnessTexture")){
                 uint32_t texture_index = pbr["metallicRoughnessTexture"]["index"];
-                mesh_material.metallic_roughness_pixels = get_texture_pixels(texture_index);
-                mesh_material.metallic_roughness_texture_id = counter.metallic_roughness_texture;
-                counter.metallic_roughness_texture++;
+                mesh.pixels.material = get_texture_pixels(texture_index);
+                mesh.uniform.material_id = counter.material_texture++;
             }
 
-            // pbr vertices
-            if(is(pbr,"baseColorFactor")) { 
-                mesh_material.base_color = glm::vec3(pbr["baseColorFactor"][0], pbr["baseColorFactor"][1], pbr["baseColorFactor"][2]);
-            }
-            if(is(pbr,"metallicFactor")) {
-                mesh_material.metalliness = pbr["metallicFactor"];
-            }
-            if(is(pbr,"roughnessFactor")) {
-                mesh_material.roughness = pbr["roughnessFactor"];
-            }
-        } // pbr
+            // PBR factors
+            if(is(pbr,"baseColorFactor")) mesh.uniform.base_color = glm::vec3(pbr["baseColorFactor"][0], pbr["baseColorFactor"][1], pbr["baseColorFactor"][2]);
+            if(is(pbr,"metallicFactor"))  mesh.uniform.metalliness = pbr["metallicFactor"];
+            if(is(pbr,"roughnessFactor")) mesh.uniform.roughness = pbr["roughnessFactor"];
+            
+        }
 
-        return mesh_material;
+        if(is(material,"normalTexture")){
+            uint32_t texture_index = material["normalTexture"]["index"];
+            mesh.pixels.normal = get_texture_pixels(texture_index);
+            mesh.uniform.normal_id = counter.normal_texture++;
+        }
+
+        if(is(material,"emissiveTexture")){
+            uint32_t texture_index = material["normalTexture"]["index"];
+            mesh.pixels.emission = get_texture_pixels(texture_index);
+            mesh.uniform.emission_id = counter.emission_texture++;
+        }
+
+        if(is(material,"emissiveFactor")){
+            mesh.uniform.emission_factor = glm::vec3(
+                material["emissiveFactor"][0],
+                material["emissiveFactor"][1],
+                material["emissiveFactor"][2]
+            );
+        }
     }
 
     //----------------------------------------------------
@@ -287,7 +314,7 @@ private:
             if(is(primitive, "material"))
             {
                 uint32_t material_id = primitive["material"];
-                model_mesh.material = get_material(material_id, depth);
+                fill_material_data(material_id, model_mesh ,depth);
             } 
 
             this->counter.mesh++;
@@ -354,81 +381,133 @@ private:
     }
 
     //----------------------------------------------------
-public:
-    Model load_glb(const char* path){ 
-        try{
-            // 0x46546C67 - file magic
-            // 0x4E4F534A - JSON chunk type
-            // 0x004E4942 - Bin chunk type 
+    //----------------------------------------------------
 
-            uint64_t start_time = timestamp_milli();
-            std::ifstream file(path, std::ifstream::binary);
-            uint32_t chunk_length, chunk_type;
-            
+    Model load_glb(std::string path){ 
+        
+        // 0x46546C67 - file magic
+        // 0x4E4F534A - JSON chunk type
+        // 0x004E4942 - Bin chunk type 
 
-            //-------------------------------
-            // check if file is valid
+        uint64_t start_time = timestamp_milli();
+        std::ifstream file(path, std::ifstream::binary);
+        uint32_t chunk_length, chunk_type;
+        
 
-            if(!file.is_open()){
-                throw std::runtime_error(std::string("Failed to open: ") + path);
+        //-------------------------------
+        // check if file is valid
+
+        if(!file.is_open()){
+            throw std::runtime_error(std::string("Failed to open: ") + path);
+        }else{
+            uint32_t magic;
+            uint32_t version;
+            uint32_t length;
+
+            file.read((char*)&magic, 4);
+            file.read((char*)&version, 4);
+            file.read((char*)&length, 4);
+
+            if(0x46546C67 == magic){
+                msg::print(path, " | 'glb", version, "' file format | ", length, " bytes (", (float)length/1024/1024, " MB)\n");
             }else{
-                uint32_t magic;
-                uint32_t version;
-                uint32_t length;
+                throw std::runtime_error(std::string("file is not .glb or is corrupted: ") + path);
+            }
+        }
 
-                file.read((char*)&magic, 4);
-                file.read((char*)&version, 4);
-                file.read((char*)&length, 4);
+        //-------------------------------
+        // read JSON
 
-                if(0x46546C67 == magic){
-                    msg::print(path, " | 'glb", version, "' file format | ", length, " bytes (", (float)length/1024/1024, " MB)\n");
-                }else{
-                    throw std::runtime_error(std::string("file is not .glb or is corrupted: ") + path);
-                }
+        file.read((char*)&chunk_length, 4);
+        file.read((char*)&chunk_type, 4);
+
+        if(chunk_type != 0x4E4F534A) throw std::runtime_error(std::string("file is corrupted: ") + path);
+
+        buffer.resize(chunk_length);
+        file.read(buffer.data(), chunk_length);
+
+        try{
+            content = content.parse(buffer);
+        }catch(json::exception& e){
+            throw e;
+        }
+
+        // output to file for debug
+        std::ofstream out("debug.json");
+        out << content.dump(4); out.close();
+
+        
+        //-------------------------------
+        // read binary buffers
+
+        file.read((char*)&chunk_length, 4);
+        file.read((char*)&chunk_type, 4);
+
+        if(chunk_type != 0x004E4942) throw std::runtime_error(std::string("file is corrupted: ") + path);
+
+        buffer.resize(chunk_length);
+        file.read(buffer.data(), chunk_length);
+        file.close();
+
+        Model model;
+        model.nodes = build_nodes(content["scenes"][0]["nodes"]);
+
+        
+        msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
+        return model;
+
+    }
+
+    //----------------------------------------------------
+
+    Model load_gltf(std::string path)
+    {
+        // remove file extension for other file reading
+        std::size_t pos = path.find_last_of("/\\");
+        this->name = path.substr( pos+1, path.length() - pos - 6 );
+        this->folder = path.substr( 0, pos+1);
+
+        // read json
+        std::ifstream stream(path);
+        stream >> content;
+        stream.close();
+
+        std::ofstream out("debug.json");
+        out << content.dump(4); out.close();
+        out.close();
+
+        // read buffer (need multiple buffers)
+        std::string buffer_uri = content["buffers"][0]["uri"];
+        this->buffer = read_file(folder + buffer_uri);
+
+        // build meshes
+        Model model;
+        model.nodes = build_nodes(content["scenes"][0]["nodes"]);
+
+        return model;
+    }
+
+public:
+
+    Model load(std::string path)
+    {
+        
+        Model model;
+        std::string type;
+
+        try{
+            type = path.substr(path.length() - 3);
+            if(type == "glb") {
+                this->type = TYPE::GLB;
+                model = load_glb(path);
             }
 
-            //-------------------------------
-            // read JSON
-
-            file.read((char*)&chunk_length, 4);
-            file.read((char*)&chunk_type, 4);
-
-            if(chunk_type != 0x4E4F534A) throw std::runtime_error(std::string("file is corrupted: ") + path);
-
-            buffer.resize(chunk_length);
-            file.read(buffer.data(), chunk_length);
-
-            try{
-                content = content.parse(buffer);
-            }catch(json::exception& e){
-                throw e;
+            type = path.substr(path.length() - 4);
+            if(type == "gltf") {
+                this->type = TYPE::GLTF;
+                model = load_gltf(path);
             }
 
-            // output to file for debug
-            std::ofstream out("debug.json");
-            out << content.dump(4); out.close();
-
-            
-            //-------------------------------
-            // read binary buffers
-
-            file.read((char*)&chunk_length, 4);
-            file.read((char*)&chunk_type, 4);
-
-            if(chunk_type != 0x004E4942) throw std::runtime_error(std::string("file is corrupted: ") + path);
-
-            buffer.resize(chunk_length);
-            file.read(buffer.data(), chunk_length);
-            file.close();
-
-            Model model;
-            model.nodes = build_nodes(content["scenes"][0]["nodes"]);
-            model.total_indices_size = this->counter.indices;
-            model.total_vertices_size = this->counter.vertices;
-            this->counter.reset();
-            
-            msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
-            return model;
         }catch(const json::exception& e){
             msg::warn(std::string("Loader: ") + e.what());
             return Model();
@@ -436,5 +515,12 @@ public:
             msg::warn(std::string("Loader: ") + e.what());
             return Model();
         };
+
+        // clear
+        model.total_indices_size = this->counter.indices;
+        model.total_vertices_size = this->counter.vertices;
+        this->counter.reset();
+
+        return model;
     }
 };

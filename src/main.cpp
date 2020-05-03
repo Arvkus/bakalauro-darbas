@@ -6,15 +6,6 @@
 Application app;
 GLFWwindow *window;
 
-void main2(){
-    Loader loader = Loader();
-    Model model;
-    model = loader.load_glb("models/hierarchy.glb");
-    //model = loader.load_glb("models/tests/duck.glb");
-    //model = loader.load_glb("models/tests/engine.glb");
-    std::cin.ignore();
-}
-
 void render_thread_function()
 {
     uint32_t frame_count = 0;

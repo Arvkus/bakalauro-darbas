@@ -3,33 +3,6 @@
 
 // https://archive.org/embed/GDC2014Bilodeau
 
-struct UniformMeshStruct{
-    alignas(16) glm::mat4 cframe = glm::mat4(1.0);
-    alignas(4) float roughness = 1.0;
-    alignas(4) float metalliness = 0.0;
-    alignas(4) int32_t albedo_texture_id = -1; // -1; means no texture
-    alignas(4) int32_t metal_roughness_texture_id = -1; // -1; means no texture
-    alignas(16) glm::vec3 base_color = glm::vec3(1.0);
-    // R Metallic
-    // G Roughness
-    // B -
-    // A -
-};
-
-struct Material{
-    std::vector<char> metallic_roughness_pixels;
-    std::vector<char> albedo_pixels;
-    std::vector<char> normal_pixels;
-
-    int32_t metallic_roughness_texture_id = -1;
-    int32_t albedo_texture_id = -1;
-    int32_t normal_texture_id = -1;
-    
-    float roughness = 1.0;
-    float metalliness = 0.0;
-    glm::vec3 base_color = glm::vec3(1.0);
-};
-
 struct MeshDrawInfo{
     uint32_t id = 0;
 	uint32_t vertex_offset = 0;
@@ -38,19 +11,41 @@ struct MeshDrawInfo{
 	Region region;
 };
 
+//-------------------------------------------
+
 class Mesh{
 public:
     std::string name = "mesh";
 
     std::vector<uint32_t> indices;
     std::vector<Vertex> vertices;
-    Material material;
     Region region;
+
+    struct Pixels{
+        std::vector<char> albedo;
+        std::vector<char> normal;
+        std::vector<char> material;
+        std::vector<char> emission;
+    } pixels;
+
+    struct UniformMeshStruct{
+        alignas(16) glm::mat4 cframe = glm::mat4(1.0);
+        alignas(16) glm::vec3 base_color = glm::vec3(1.0);
+        alignas(16) glm::vec3 emission_factor = glm::vec3(1.0);
+        alignas(4) float roughness = 1.0;
+        alignas(4) float metalliness = 0.0;
+        alignas(4) int32_t albedo_id = -1; // -1; means no texture
+        alignas(4) int32_t normal_id = -1; // (occlusion, roughness, metalliness)
+        alignas(4) int32_t material_id = -1;
+        alignas(4) int32_t emission_id = -1;
+    } uniform;
 
     uint32_t id = 0; // mesh id number
     uint32_t ioffset = 0; // linear memory index offset location
     uint32_t voffset = 0; // linear memory vertex offset location
 };
+
+//-------------------------------------------
 
 class Node{
 public:
@@ -92,45 +87,50 @@ public:
         for(Node& node : children) node.get_draw_info(infos, cframe_offset);
     }
 
-    void update_dynamic_buffer(Descriptors *descriptors, glm::mat4 cframe_offset = glm::mat4(1.0))
+    void update_dynamic_buffer(Instance* instance, Descriptors *descriptors, glm::mat4 cframe_offset = glm::mat4(1.0))
     {
         cframe_offset *= this->cframe; 
         for(Mesh& mesh : meshes)
         { 
-            // uniform buffer
-            UniformMeshStruct ums;
-            ums.cframe = cframe_offset;
-            ums.metalliness = mesh.material.metalliness;
-            ums.roughness = mesh.material.roughness;
-            ums.base_color = mesh.material.base_color;
-
-            // uniform samplers
-            ums.albedo_texture_id = mesh.material.albedo_texture_id;
-            ums.metal_roughness_texture_id = mesh.material.metallic_roughness_texture_id;
-            
-            
-            if(mesh.material.albedo_texture_id != -1)
+            // image buffers
+            if(mesh.uniform.albedo_id != -1)
             {
-                uint32_t tex = mesh.material.albedo_texture_id;
-                VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-                descriptors->albedo.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.material.albedo_pixels.data(), tex);
+                uint32_t tex = mesh.uniform.albedo_id;
+                descriptors->albedo.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.pixels.albedo.data(), tex);
+                vkDestroyImageView(instance->device, descriptors->albedo_image_views[tex], nullptr);
                 descriptors->albedo_image_views[tex] = descriptors->albedo.return_image_view(tex);
             }
-            
-            
-            if(mesh.material.metallic_roughness_texture_id != -1)
+
+            if(mesh.uniform.normal_id != -1)
             {
-                uint32_t tex = mesh.material.metallic_roughness_texture_id;
-                VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-                descriptors->material.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.material.metallic_roughness_pixels.data(), tex);
-                descriptors->material_image_views[tex] = descriptors->material.return_image_view(tex);
+                uint32_t tex = mesh.uniform.normal_id;
+                descriptors->normal.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.pixels.normal.data(), tex);
+                vkDestroyImageView(instance->device, descriptors->normal_image_views[tex], nullptr);
+                descriptors->normal_image_views[tex] = descriptors->normal.return_image_view(tex);
             }
             
+            if(mesh.uniform.material_id != -1)
+            {
+                uint32_t tex = mesh.uniform.material_id;
+                descriptors->material.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.pixels.material.data(), tex);
+                vkDestroyImageView(instance->device, descriptors->material_image_views[tex], nullptr);
+                descriptors->material_image_views[tex] = descriptors->material.return_image_view(tex);
+            }
 
-            descriptors->dynamic_uniform_buffer.fill_memory(&ums, sizeof(UniformMeshStruct), DYNAMIC_DESCRIPTOR_SIZE * mesh.id );
+            if(mesh.uniform.emission_id != -1)
+            {
+                uint32_t tex = mesh.uniform.material_id;
+                descriptors->emission.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.pixels.emission.data(), tex);
+                vkDestroyImageView(instance->device, descriptors->emission_image_views[tex], nullptr);
+                descriptors->emission_image_views[tex] = descriptors->emission.return_image_view(tex);
+            }
+
+            // uniform buffer
+            mesh.uniform.cframe = cframe_offset;
+            descriptors->dynamic_uniform_buffer.fill_memory(&mesh.uniform, sizeof(mesh.uniform), DYNAMIC_DESCRIPTOR_SIZE * mesh.id );
         }
 
-        for(Node& node : children) node.update_dynamic_buffer(descriptors, cframe_offset);
+        for(Node& node : children) node.update_dynamic_buffer(instance, descriptors, cframe_offset);
     }
 
     // debug ----------------------------------------------------
@@ -140,7 +140,7 @@ public:
         
         for(Mesh& mesh : meshes){ 
             gap(depth+1); 
-            msg::printl(mesh.name," | ", mesh.id, " | ", mesh.material.albedo_texture_id, " | ", mesh.material.metallic_roughness_texture_id); 
+            //msg::printl();
         }
 
         for(Node& node : children) node.iterate(depth+1);
@@ -183,7 +183,7 @@ public:
     void prepare_model(Instance* instance, Descriptors* descriptors)
     {
         create_buffers(instance);
-        for(Node& node : nodes) node.update_dynamic_buffer(descriptors);
+        for(Node& node : nodes) node.update_dynamic_buffer(instance, descriptors);
         for(Node& node : nodes) node.get_draw_info(infos);
         //for(Node& node : nodes) node.iterate();
     }
@@ -207,7 +207,6 @@ public:
     void destroy(){
         vertices.destroy();
         indices.destroy();
-
     }
 
     //------------------------------------

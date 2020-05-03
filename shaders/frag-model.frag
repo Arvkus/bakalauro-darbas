@@ -14,11 +14,14 @@ layout(binding = 1) uniform Properties {
 
 layout(binding = 2) uniform Mesh {
     mat4 cframe;
+    vec3 base_color;
+    vec3 emission_factor;
     float roughness;
     float metalliness;
-    int albedo_texture_id;
-    int material_texture_id;
-    vec3 base_color;
+    int albedo_id;
+    int normal_id;
+    int material_id;
+    int emission_id;
 } mesh;
 
 layout(binding = 3) uniform sampler2D enviroment_sampler;
@@ -45,8 +48,8 @@ void main() {
     float rough = mesh.roughness;
     float metal = mesh.metalliness;
 
-    vec3 albedo = mesh.albedo_texture_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_texture_id], inTexcoord).rgb;
-    vec3 material = mesh.material_texture_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_texture_id], inTexcoord).rgb;
+    vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
+    vec3 material = mesh.material_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_id], inTexcoord).rgb;
 
     vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
@@ -77,5 +80,6 @@ void main() {
     //vec3 result = color * (1-metal) + (mapped * metal);
 
     vec3 result = color * (1-material.z) + (mapped * material.z);
-    outColor = vec4(result, 1.0);
+    vec3 normc = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
+    outColor = vec4(normc, 1.0);
 }

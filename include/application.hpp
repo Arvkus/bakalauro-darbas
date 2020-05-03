@@ -45,10 +45,10 @@ public:
         
         Loader loader = Loader();
         
-        skybox = loader.load_glb("models/cube.glb");
+        skybox = loader.load("models/cube.glb");
         skybox.prepare_model(&this->instance, &this->descriptors);
         
-        model = loader.load_glb("models/complex.glb");
+        model = loader.load("models/tests/glTF/Fish/BarramundiFish.gltf");
         model.prepare_model(&this->instance, &this->descriptors);
 
         camera.set_region(model.get_region());
@@ -132,7 +132,7 @@ private:
     {
         if(Input::Keys::L == false) return false;
 
-        pfd::open_file f = pfd::open_file("Choose files to read", FILE_PATH, { "Model Files (.glb .gltf)", "*.glb"}, false);
+        pfd::open_file f = pfd::open_file("Choose files to read", FILE_PATH, { "Model Files (.glb .gltf)", "*.glb *.gltf"}, false);
         if(f.result().size() > 0){
              vkDeviceWaitIdle(instance.device);
             msg::printl("File selected from dialog: ", f.result()[0]);
@@ -145,7 +145,7 @@ private:
             this->descriptors.bind_enviroment_image(&this->enviroment_image);
             
             Loader loader = Loader();
-            model = loader.load_glb(f.result()[0].c_str());
+            model = loader.load(f.result()[0].c_str());
             model.prepare_model(&this->instance, &this->descriptors);
 
             camera.set_region(model.get_region());

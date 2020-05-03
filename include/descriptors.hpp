@@ -9,7 +9,7 @@ public:
     void init(Instance *instance){
         this->instance = instance;
         create_texture_sampler();
-        create_images();
+        create_uniform_images();
         create_uniform_buffers();
         create_descriptor_set_layout();
         create_descriptor_pool();
@@ -30,6 +30,12 @@ public:
         view_buffer.destroy();
         properties_buffer.destroy();
         dynamic_uniform_buffer.destroy();
+
+        this->albedo.destroy(); 
+        this->normal.destroy(); 
+        this->material.destroy(); 
+        this->emission.destroy(); 
+
         vkDestroySampler(instance->device, texture_sampler, nullptr);
     }
 
@@ -53,7 +59,7 @@ public:
     std::array<VkImageView, MAX_IMAGES> material_image_views;
     std::array<VkImageView, MAX_IMAGES> emission_image_views;
 
-    void create_images()
+    void create_uniform_images()
     {
         // load default img
         int width = 0, height = 0, channel = 0;
@@ -375,15 +381,3 @@ private:
         printf("Created descriptor pool \n");
     }
 };
-
-/*
-        md.add(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 1); // view
-        md.add(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // properties
-        md.add(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1); // mesh
-        md.add(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // enviroment
-        md.add(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // albedo
-        md.add(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // normal
-        md.add(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // material
-        md.add(7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1); // emission
-
-*/

@@ -17,11 +17,14 @@ layout(binding = 0) uniform Camera {
 
 layout(binding = 2) uniform Mesh {
     mat4 cframe;
+    vec3 base_color;
+    vec3 emission_factor;
     float roughness;
     float metalliness;
-    int albedo_texture_id;
-    int material_texture_id;
-    vec3 base_color;
+    int albedo_id;
+    int normal_id;
+    int material_id;
+    int emission_id;
 } mesh;
 
 void main() {
