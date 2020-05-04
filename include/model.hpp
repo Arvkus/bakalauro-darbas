@@ -96,8 +96,15 @@ public:
                 mesh.vertices[i1].bitangent = glm::normalize(bitangent);
                 mesh.vertices[i2].bitangent = glm::normalize(bitangent);
 
-                msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].tangent, mesh.vertices[i0].bitangent));
+                // msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent));
+   
                 //msg::error(i," ", mesh.vertices[i0].normal, mesh.vertices[i0].tangent, mesh.vertices[i0].bitangent);
+                /*
+                vec3 T = normalize(vec3(mesh.cframe * vec4(inTangent,   0.0)));
+                vec3 B = normalize(vec3(mesh.cframe * vec4(inBitangent, 0.0)));
+                vec3 N = normalize(vec3(mesh.cframe * vec4(inNormal,    0.0)));
+                mat3 TBN = transpose(mat3(T, B, N));
+                */
             }
         }
         for(Node& node : children) node.calculate_vertex_TBN();
@@ -140,7 +147,10 @@ public:
     {
         cframe_offset *= this->cframe; 
         for(Mesh& mesh : meshes)
-        { 
+        {   
+            glm::vec3 n = mesh.vertices[0].normal;
+            msg::error(this->cframe * glm::vec4(n.x, n.y, n.z, 1.0));
+
             // image buffers
             if(mesh.uniform.albedo_id != -1)
             {

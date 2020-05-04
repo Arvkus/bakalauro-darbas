@@ -51,12 +51,12 @@ void main() {
 
     vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
     vec3 material = mesh.material_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_id], inTexcoord).rgb;
+
+    // normal
     vec3 normal = inNormal;
-
     normal = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
-    normal = normal * 2.0 - 1.0;
-    normal = normalize(inTBN * normal);  
-
+    normal = normalize(normal * 2.0 - 1.0);
+    normal = normalize(inTBN * normal);
 
     vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)

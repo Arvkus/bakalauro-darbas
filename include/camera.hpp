@@ -7,12 +7,15 @@ class Camera{
 private:
 
     // change position based on distance/origin/rotation
-    glm::mat4 calculate_cframe(){ // TODO: broken
-        glm::vec3 pos; // = glm::vec3(0,0,1);
+    glm::mat4 calculate_cframe(){
+        glm::vec3 pos;
 
-        pos.x = cos(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
-        pos.y = sin(glm::radians((float)pitch));
-        pos.z = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
+        //pos.x = cos(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
+        //pos.y = sin(glm::radians((float)pitch));
+        //pos.z = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
+
+        pos.x = sin(glm::radians((float)yaw));
+        pos.z = cos(glm::radians((float)yaw));
         
         return glm::lookAt(origin + pos*distance, origin, glm::vec3(0,1,0));
     }
@@ -24,8 +27,8 @@ public:
     float scroll_speed = 1;
     float distance = 20;
 
-    int yaw   = 45;
-    int pitch = 45; 
+    int yaw   = 0; // 45
+    int pitch = 0; // 45
     int roll  = 0;
 
     //----------------------------------------------

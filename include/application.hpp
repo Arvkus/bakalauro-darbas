@@ -49,7 +49,8 @@ public:
         skybox.prepare_model(&this->instance, &this->descriptors);
         
         //model = loader.load("models/crate.glb");
-        model = loader.load("models/tests/NormalTangentTest.glb");
+        model = loader.load("models/wall.glb");
+        //model = loader.load("models/tests/NormalTangentTest.glb");
         model.prepare_model(&this->instance, &this->descriptors);
 
         camera.set_region(model.get_region());
@@ -175,7 +176,8 @@ private:
         float height = instance.surface.capabilities.currentExtent.height;
 
         UniformCameraStruct ubo = {};
-        ubo.view = camera.cframe(); //glm::translate(glm::mat4(1.0), glm::vec3(0,0,-20));
+        ubo.view = camera.cframe(); // glm::translate(glm::mat4(1.0), glm::vec3(0,0,-4));
+        //msg::printl(camera.cframe() * glm::vec4(1,0,0,1));
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.02f, 1000.0f);
 
         UniformPropertiesStruct properties; // ...
