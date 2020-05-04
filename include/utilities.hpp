@@ -63,12 +63,12 @@ struct Vertex
 	Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texture){
 		this->position = position;
 		this->normal = normal;
-		this->texture = texture;
+		this->texcoord = texture;
 	};
 	
 	alignas(16) glm::vec3 position;
 	alignas(16) glm::vec3 normal;
-	alignas(8) glm::vec2 texture;
+	alignas(8) glm::vec2 texcoord;
 
 	alignas(16) glm::vec2 tangent;
 	alignas(16) glm::vec2 bitangent;
@@ -99,7 +99,7 @@ struct Vertex
 		descriptions[2].binding = 0;
 		descriptions[2].location = 2;
 		descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		descriptions[2].offset = offsetof(Vertex, texture);
+		descriptions[2].offset = offsetof(Vertex, texcoord);
 
 		descriptions[3].binding = 0;
 		descriptions[3].location = 3;
