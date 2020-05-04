@@ -5,6 +5,7 @@ layout(location = 0) in vec2 inTexcoord;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inPosition;
 layout(location = 3) in vec3 inViewPos;
+layout(location = 4) in mat3 inTBN;
 
 layout(location = 0) out vec4 outColor;
 
@@ -52,8 +53,10 @@ void main() {
     vec3 material = mesh.material_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_id], inTexcoord).rgb;
     vec3 normal = inNormal;
 
-    //normal = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
-    //normal = normalize(normal * 2.0 - 1.0);  
+    normal = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(inTBN * normal);  
+
 
     vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)

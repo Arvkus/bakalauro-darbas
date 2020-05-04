@@ -11,6 +11,7 @@ layout(location = 0) out vec2 outTexcoord;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outPosition;
 layout(location = 3) out vec3 outViewPos;
+layout(location = 4) out mat3 outTBN;
 
 layout(binding = 0) uniform Camera {
     mat4 view;
@@ -30,13 +31,18 @@ layout(binding = 2) uniform Mesh {
 } mesh;
 
 void main() {
-    mat4 v = inverse(camera.view); // camera world space
-    mat4 m = mesh.cframe; // model world space
+    mat4 v = inverse(camera.view); // camera world 
+    
+    vec3 T = normalize(vec3(mesh.cframe * vec4(inTangent,   0.0)));
+    vec3 B = normalize(vec3(mesh.cframe * vec4(inBitangent, 0.0)));
+    vec3 N = normalize(vec3(mesh.cframe * vec4(inNormal,    0.0)));
+    mat3 TBN = transpose(mat3(T, B, N));
 
+    outTBN = TBN;
     outTexcoord = inTexcoord;
 
     outNormal = mat3(mesh.cframe) * inNormal;  // transpose(inverse(material.model))
-    outPosition = vec3( m * vec4(inPosition, 1.0) ); //vec3(m[3][0], m[3][1], m[3][2]);
+    outPosition = vec3(mesh.cframe * vec4(inPosition, 1.0)); //vec3(m[3][0], m[3][1], m[3][2]);
     outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
 
     gl_Position = camera.proj * camera.view * mesh.cframe * vec4(inPosition, 1.0);

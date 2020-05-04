@@ -96,6 +96,7 @@ public:
                 mesh.vertices[i1].bitangent = glm::normalize(bitangent);
                 mesh.vertices[i2].bitangent = glm::normalize(bitangent);
 
+                msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].tangent, mesh.vertices[i0].bitangent));
                 //msg::error(i," ", mesh.vertices[i0].normal, mesh.vertices[i0].tangent, mesh.vertices[i0].bitangent);
             }
         }
