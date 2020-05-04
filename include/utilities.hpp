@@ -66,9 +66,12 @@ struct Vertex
 		this->texture = texture;
 	};
 	
-	glm::vec3 position;
-	glm::vec3 normal;
-	glm::vec2 texture;
+	alignas(16) glm::vec3 position;
+	alignas(16) glm::vec3 normal;
+	alignas(8) glm::vec2 texture;
+
+	alignas(16) glm::vec2 tangent;
+	alignas(16) glm::vec2 bitangent;
 
 	/// buffer binding indices, tells `attribute locations` what buffer to use
 	static VkVertexInputBindingDescription get_binding_description() {
@@ -80,8 +83,8 @@ struct Vertex
 	};
 
 	/// location attributes for vertex shader
-	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions() { // vertex shader layout attributes
-		std::array<VkVertexInputAttributeDescription, 3> descriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 5> get_attribute_descriptions() { // vertex shader layout attributes
+		std::array<VkVertexInputAttributeDescription, 5> descriptions = {};
 
 		descriptions[0].binding = 0;
 		descriptions[0].location = 0;
@@ -97,6 +100,16 @@ struct Vertex
 		descriptions[2].location = 2;
 		descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
 		descriptions[2].offset = offsetof(Vertex, texture);
+
+		descriptions[3].binding = 0;
+		descriptions[3].location = 3;
+		descriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		descriptions[3].offset = offsetof(Vertex, tangent);
+
+		descriptions[4].binding = 0;
+		descriptions[4].location = 4;
+		descriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
+		descriptions[4].offset = offsetof(Vertex, bitangent);
 
 		return descriptions;
 	};

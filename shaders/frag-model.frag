@@ -81,5 +81,5 @@ void main() {
 
     vec3 result = color * (1-material.z) + (mapped * material.z);
     vec3 normc = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
-    outColor = vec4(normc, 1.0);
+    outColor = vec4(result, 1.0);
 }
