@@ -48,7 +48,7 @@ public:
         skybox = loader.load("models/cube.glb");
         skybox.prepare_model(&this->instance, &this->descriptors);
         
-        model = loader.load("models/tests/NormalTangentTest.glb");
+        model = loader.load("models/crate.glb");
         model.prepare_model(&this->instance, &this->descriptors);
 
         camera.set_region(model.get_region());

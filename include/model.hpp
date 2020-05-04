@@ -56,18 +56,24 @@ public:
 
     void calculate_vertex_TBN(){
         for(Mesh& mesh : meshes){
-            for(uint32_t i = 0; i < mesh.vertices.size(); i=i+3)
+            for(uint32_t i = 0; i < mesh.indices.size(); i=i+3)
             {
+                // triangle indices
+                uint32_t i0 = mesh.indices[i+0]; 
+                uint32_t i1 = mesh.indices[i+1];
+                uint32_t i2 = mesh.indices[i+2];
+
+                // triangle vertices (from indices)
                 std::array<glm::vec3, 3> vertices = {
-                    mesh.vertices[i+0].position,
-                    mesh.vertices[i+1].position,
-                    mesh.vertices[i+2].position,
+                    mesh.vertices[i0].position,
+                    mesh.vertices[i1].position,
+                    mesh.vertices[i2].position,
                 };
 
                 std::array<glm::vec2, 3> texcoords = {
-                    mesh.vertices[i+0].texcoord,
-                    mesh.vertices[i+1].texcoord,
-                    mesh.vertices[i+2].texcoord,
+                    mesh.vertices[i0].texcoord,
+                    mesh.vertices[i1].texcoord,
+                    mesh.vertices[i2].texcoord,
                 };
 
                 glm::vec3 pos1 = vertices[1] - vertices[0];
@@ -76,19 +82,21 @@ public:
                 glm::vec2 uv1 = texcoords[1] - texcoords[0];
                 glm::vec2 uv2 = texcoords[2] - texcoords[0];
 
-                float r = 1.0f / (uv1.x * uv2.y - uv1.y * uv2.x);
-                glm::vec3 tangent = (pos1 * uv2.y - pos2 * uv1.y)*r;
-                glm::vec3 bitangent = (pos2 * uv1.x - pos1 * uv2.x)*r;
+                // get tangent, bitangent based on formula
+                float r = uv1.x * uv2.y - uv1.y * uv2.x;
+                glm::vec3 tangent = (pos1 * uv2.y - pos2 * uv1.y)/r;
+                glm::vec3 bitangent = (pos2 * uv1.x - pos1 * uv2.x)/r;
 
-                mesh.vertices[i+0].tangent = glm::normalize(tangent);
-                mesh.vertices[i+1].tangent = glm::normalize(tangent);
-                mesh.vertices[i+2].tangent = glm::normalize(tangent);
+                // normalize
+                mesh.vertices[i0].tangent = glm::normalize(tangent);
+                mesh.vertices[i1].tangent = glm::normalize(tangent);
+                mesh.vertices[i2].tangent = glm::normalize(tangent);
 
-                mesh.vertices[i+0].bitangent = glm::normalize(bitangent);
-                mesh.vertices[i+1].bitangent = glm::normalize(bitangent);
-                mesh.vertices[i+2].bitangent = glm::normalize(bitangent);
+                mesh.vertices[i0].bitangent = glm::normalize(bitangent);
+                mesh.vertices[i1].bitangent = glm::normalize(bitangent);
+                mesh.vertices[i2].bitangent = glm::normalize(bitangent);
 
-                msg::error(i," ", mesh.vertices[0].normal, mesh.vertices[0].tangent, mesh.vertices[0].bitangent);
+                //msg::error(i," ", mesh.vertices[i0].normal, mesh.vertices[i0].tangent, mesh.vertices[i0].bitangent);
             }
         }
         for(Node& node : children) node.calculate_vertex_TBN();
@@ -222,6 +230,7 @@ public:
     // 2
     void prepare_model(Instance* instance, Descriptors* descriptors)
     {
+        for(Node& node : nodes) node.calculate_vertex_TBN();
         create_buffers(instance);
         for(Node& node : nodes) node.update_dynamic_buffer(instance, descriptors);
         for(Node& node : nodes) node.get_draw_info(infos);

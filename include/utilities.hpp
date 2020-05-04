@@ -70,8 +70,8 @@ struct Vertex
 	alignas(16) glm::vec3 normal;
 	alignas(8) glm::vec2 texcoord;
 
-	alignas(16) glm::vec2 tangent;
-	alignas(16) glm::vec2 bitangent;
+	alignas(16) glm::vec3 tangent;
+	alignas(16) glm::vec3 bitangent;
 
 	/// buffer binding indices, tells `attribute locations` what buffer to use
 	static VkVertexInputBindingDescription get_binding_description() {

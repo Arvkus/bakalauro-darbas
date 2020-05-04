@@ -50,6 +50,10 @@ void main() {
 
     vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
     vec3 material = mesh.material_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_id], inTexcoord).rgb;
+    vec3 normal = inNormal;
+
+    //normal = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
+    //normal = normalize(normal * 2.0 - 1.0);  
 
     vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
@@ -59,18 +63,18 @@ void main() {
     vec3 ambient_color = light_color * 0.01;
     
     //diffuse color
-    float brightness = max(dot(inNormal, light_dir), 0.0);
+    float brightness = max(dot(normal, light_dir), 0.0);
     vec3 diffuse_color = light_color * brightness;
 
     // specular color
     float specular_str = 1.0 - material.y; // roughness
     vec3 I = normalize(inViewPos - inPosition); // to what fragment camera is looking (direction)
-    vec3 R = reflect(-light_dir, inNormal);
+    vec3 R = reflect(-light_dir, normal);
     float spec = pow(max(dot(I, R), 0.0), 64);
     vec3 specular_color = specular_str * spec * vec3(1.0);  
 
     // reflect color
-    vec2 uv = sample_spherical_map( reflect(-I, inNormal) );
+    vec2 uv = sample_spherical_map( reflect(-I, normal) );
     vec3 reflection_color = texture(enviroment_sampler, uv).rgb;
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // gamma correction 
