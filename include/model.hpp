@@ -83,9 +83,9 @@ public:
                 glm::vec2 uv2 = texcoords[2] - texcoords[0];
 
                 // get tangent, bitangent based on formula
-                float r = uv1.x * uv2.y - uv1.y * uv2.x;
-                glm::vec3 tangent = (pos1 * uv2.y - pos2 * uv1.y)/r;
-                glm::vec3 bitangent = (pos2 * uv1.x - pos1 * uv2.x)/r;
+                float r = 1 / (uv1.x * uv2.y - uv1.y * uv2.x);
+                glm::vec3 tangent = (pos1 * uv2.y - pos2 * uv1.y)*r;
+                glm::vec3 bitangent = (pos2 * uv1.x - pos1 * uv2.x)*r;
 
                 // normalize
                 mesh.vertices[i0].tangent = glm::normalize(tangent);
@@ -96,9 +96,9 @@ public:
                 mesh.vertices[i1].bitangent = glm::normalize(bitangent);
                 mesh.vertices[i2].bitangent = glm::normalize(bitangent);
 
-                // msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent));
-   
-                //msg::error(i," ", mesh.vertices[i0].normal, mesh.vertices[i0].tangent, mesh.vertices[i0].bitangent);
+                //msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent));
+                
+
                 /*
                 vec3 T = normalize(vec3(mesh.cframe * vec4(inTangent,   0.0)));
                 vec3 B = normalize(vec3(mesh.cframe * vec4(inBitangent, 0.0)));
@@ -166,6 +166,19 @@ public:
                 descriptors->normal.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.pixels.normal.data(), tex);
                 vkDestroyImageView(instance->device, descriptors->normal_image_views[tex], nullptr);
                 descriptors->normal_image_views[tex] = descriptors->normal.return_image_view(tex);
+
+
+                //memcpy(&colors, mesh.pixels.normal.data(), (size_t)sizeof(colors)); // destination, source, size
+                
+                for(uint32_t i = 0; i < mesh.pixels.normal.size()/3; i=i+3){
+                    uint32_t r = mesh.pixels.normal[i+0];
+                    uint32_t g = mesh.pixels.normal[i+1];
+                    uint32_t b = mesh.pixels.normal[i+2];
+                    uint32_t a = mesh.pixels.normal[i+3];
+                    glm::vec4 color = glm::vec4(r,g,b,a);
+                    //msg::error(color);
+                }
+
             }
             
             if(mesh.uniform.material_id != -1)

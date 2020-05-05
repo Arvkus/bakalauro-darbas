@@ -49,16 +49,16 @@ void main() {
     float rough = mesh.roughness;
     float metal = mesh.metalliness;
 
-    vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
+    vec3 albedo = 2 * texture(normal_sampler[mesh.normal_id], inTexcoord).rgb - 1;
+    //vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
     vec3 material = mesh.material_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_id], inTexcoord).rgb;
 
     // normal
-    vec3 normal = inNormal;
-    normal = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
-    normal = normalize(normal * 2.0 - 1.0);
+    vec3 normal = vec3(0,0,1); //inNormal;
+    normal = 2 * texture(normal_sampler[mesh.normal_id], inTexcoord).rgb - 1;
     normal = normalize(inTBN * normal);
 
-    vec3 light_color = vec3(1.0) - exp(-vec3(0.6) * exposure);  
+    vec3 light_color = vec3(0.6);
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
     
     //-------------------------------
@@ -87,6 +87,5 @@ void main() {
     //vec3 result = color * (1-metal) + (mapped * metal);
 
     vec3 result = color * (1-material.z) + (mapped * material.z);
-    vec3 normc = texture(normal_sampler[mesh.normal_id], inTexcoord).rgb;
     outColor = vec4(result, 1.0);
 }
