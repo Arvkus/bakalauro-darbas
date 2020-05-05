@@ -11,7 +11,11 @@ layout(location = 0) out vec2 outTexcoord;
 layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outPosition;
 layout(location = 3) out vec3 outViewPos;
-layout(location = 4) out mat3 outTBN;
+layout(location = 4) out outTangentSpace{
+    mat3 TBN;
+    vec3 viewPos;
+    vec3 fragPos;
+} tan_space;
 
 layout(binding = 0) uniform Camera {
     mat4 view;
@@ -38,12 +42,15 @@ void main() {
     vec3 N = normalize(vec3(mesh.cframe * vec4(inNormal,    0.0)));
     mat3 TBN = transpose(mat3(T, B, N));
 
-    outTBN = TBN;
-    outTexcoord = inTexcoord;
-
     outNormal = mat3(mesh.cframe) * inNormal;  // transpose(inverse(material.model))
     outPosition = vec3(mesh.cframe * vec4(inPosition, 1.0)); //vec3(m[3][0], m[3][1], m[3][2]);
     outViewPos = vec3(v[3][0], v[3][1], v[3][2]);
+
+    tan_space.TBN = TBN;
+    tan_space.viewPos = TBN * vec3(v[3][0], v[3][1], v[3][2]);
+    tan_space.fragPos = TBN * vec3(mesh.cframe * vec4(inPosition, 0.0));
+
+    outTexcoord = inTexcoord;
 
     gl_Position = camera.proj * camera.view * mesh.cframe * vec4(inPosition, 1.0);
 }

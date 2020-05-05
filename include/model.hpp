@@ -97,7 +97,7 @@ public:
                 mesh.vertices[i2].bitangent = glm::normalize(bitangent);
 
                 //msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent));
-                
+                msg::error(mesh.vertices[i0].normal, mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent);
 
                 /*
                 vec3 T = normalize(vec3(mesh.cframe * vec4(inTangent,   0.0)));

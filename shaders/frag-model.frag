@@ -5,7 +5,11 @@ layout(location = 0) in vec2 inTexcoord;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inPosition;
 layout(location = 3) in vec3 inViewPos;
-layout(location = 4) in mat3 inTBN;
+layout(location = 4) in inTangentSpace{
+    mat3 TBN;
+    vec3 viewPos;
+    vec3 fragPos;
+} tan_space;
 
 layout(location = 0) out vec4 outColor;
 
@@ -56,7 +60,7 @@ void main() {
     // normal
     vec3 normal = vec3(0,0,1); //inNormal;
     normal = 2 * texture(normal_sampler[mesh.normal_id], inTexcoord).rgb - 1;
-    normal = normalize(inTBN * normal);
+    //normal = normalize(inTBN * normal);
 
     vec3 light_color = vec3(0.6);
     vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
