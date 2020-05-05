@@ -14,8 +14,9 @@ private:
         //pos.y = sin(glm::radians((float)pitch));
         //pos.z = sin(glm::radians((float)yaw)) * cos(glm::radians((float)pitch));
 
-        pos.x = sin(glm::radians((float)yaw));
-        pos.z = cos(glm::radians((float)yaw));
+        pos.x = sin(glm::radians((float)yaw))* cos(glm::radians((float)pitch));
+        pos.y = sin(glm::radians((float)pitch));
+        pos.z = cos(glm::radians((float)yaw))* cos(glm::radians((float)pitch));
         
         return glm::lookAt(origin + pos*distance, origin, glm::vec3(0,1,0));
     }
@@ -49,8 +50,8 @@ public:
         //------------------------
         // move origin
 
-        float x = cos(glm::radians((float)yaw));
-        float y = sin(glm::radians((float)yaw));
+        float x = sin(glm::radians((float)yaw));
+        float y = cos(glm::radians((float)yaw));
 
         this->origin.x -= x * (Input::Keys::W - Input::Keys::S)*speed;
         this->origin.z -= y * (Input::Keys::W - Input::Keys::S)*speed;
@@ -66,7 +67,7 @@ public:
             float x = Input::Mouse::Delta.x;
             float y = Input::Mouse::Delta.y;
 
-            yaw = (yaw + (int)x ) % 360;
+            yaw = (yaw - (int)x ) % 360;
             pitch = (pitch + (int)y );
             
             if(pitch >  70) pitch =  70;

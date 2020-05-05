@@ -169,24 +169,15 @@ private:
     {
         camera.move();
         Input::reset();
-
-        //std::cout<< "A: " <<std::boolalpha <<Input::Keys::A << " | W: " << Input::Keys::W <<std::endl;
  
         float width = instance.surface.capabilities.currentExtent.width;
         float height = instance.surface.capabilities.currentExtent.height;
 
         UniformCameraStruct ubo = {};
         ubo.view = camera.cframe(); // glm::translate(glm::mat4(1.0), glm::vec3(0,0,-4));
-        //msg::printl(camera.cframe() * glm::vec4(1,0,0,1));
         ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.02f, 1000.0f);
 
         UniformPropertiesStruct properties; // ...
-
-        /*
-        if(Input::Keys::Equal) this->exposure += this->exposure/20; ubo.exposure = this->exposure;
-        if(Input::Keys::Minus) this->exposure -= this->exposure/20; ubo.exposure = this->exposure;
-        //ubo.model = glm::translate(ubo.model, glm::vec3(0,0,.5));
-        */
 
         descriptors.view_buffer.fill_memory(&ubo, sizeof(ubo));
     }

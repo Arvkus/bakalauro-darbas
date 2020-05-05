@@ -97,7 +97,7 @@ public:
                 mesh.vertices[i2].bitangent = glm::normalize(bitangent);
 
                 //msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent));
-                msg::error(mesh.vertices[i0].normal, mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent);
+                //msg::error(mesh.vertices[i0].normal, mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent);
 
                 /*
                 vec3 T = normalize(vec3(mesh.cframe * vec4(inTangent,   0.0)));
@@ -148,9 +148,6 @@ public:
         cframe_offset *= this->cframe; 
         for(Mesh& mesh : meshes)
         {   
-            glm::vec3 n = mesh.vertices[0].normal;
-            msg::error(this->cframe * glm::vec4(n.x, n.y, n.z, 1.0));
-
             // image buffers
             if(mesh.uniform.albedo_id != -1)
             {
@@ -167,9 +164,7 @@ public:
                 vkDestroyImageView(instance->device, descriptors->normal_image_views[tex], nullptr);
                 descriptors->normal_image_views[tex] = descriptors->normal.return_image_view(tex);
 
-
-                //memcpy(&colors, mesh.pixels.normal.data(), (size_t)sizeof(colors)); // destination, source, size
-                
+                /*
                 for(uint32_t i = 0; i < mesh.pixels.normal.size()/3; i=i+3){
                     uint32_t r = mesh.pixels.normal[i+0];
                     uint32_t g = mesh.pixels.normal[i+1];
@@ -178,6 +173,7 @@ public:
                     glm::vec4 color = glm::vec4(r,g,b,a);
                     //msg::error(color);
                 }
+                */
 
             }
             
