@@ -33,7 +33,7 @@ public:
         alignas(16) glm::vec3 base_color = glm::vec3(1.0);
         alignas(16) glm::vec3 emission_factor = glm::vec3(1.0);
         alignas(4) float roughness = 1.0;
-        alignas(4) float metalliness = 0.0;
+        alignas(4) float metalliness = 1.0;
         alignas(4) int32_t albedo_id = -1; // -1; means no texture
         alignas(4) int32_t normal_id = -1; // (occlusion, roughness, metalliness)
         alignas(4) int32_t material_id = -1;
@@ -148,6 +148,8 @@ public:
         cframe_offset *= this->cframe; 
         for(Mesh& mesh : meshes)
         {   
+            msg::printl(mesh.uniform.metalliness, " ", mesh.uniform.roughness);
+
             // image buffers
             if(mesh.uniform.albedo_id != -1)
             {

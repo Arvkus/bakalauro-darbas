@@ -49,7 +49,7 @@ public:
         skybox.prepare_model(&this->instance, &this->descriptors);
         
         //model = loader.load("models/crate.glb");
-        model = loader.load("models/tests/helmet.glb");
+        model = loader.load("models/material.glb");
         //model = loader.load("models/tests/NormalTangentTest.glb");
         model.prepare_model(&this->instance, &this->descriptors);
 
@@ -175,7 +175,7 @@ private:
 
         UniformCameraStruct ubo = {};
         ubo.view = camera.cframe(); // glm::translate(glm::mat4(1.0), glm::vec3(0,0,-4));
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.02f, 1000.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.001f, 100.0f);
 
         UniformPropertiesStruct properties; // ...
 

@@ -265,7 +265,7 @@ private:
         }
 
         if(is(material,"emissiveTexture")){
-            uint32_t texture_index = material["normalTexture"]["index"];
+            uint32_t texture_index = material["emissiveTexture"]["index"];
             mesh.pixels.emission = get_texture_pixels(texture_index);
             mesh.uniform.emission_id = counter.emission_texture++;
         }
