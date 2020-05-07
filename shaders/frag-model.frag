@@ -1,15 +1,14 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+const float PI = 3.14159265359;
+
+//-----------------------------------------------------------------
+
 layout(location = 0) in vec2 inTexcoord;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inPosition;
 layout(location = 3) in vec3 inViewPos;
-layout(location = 4) in inTangentSpace{
-    mat3 TBN;
-    vec3 viewPos;
-    vec3 fragPos;
-} tan_space;
 
 layout(location = 0) out vec4 outColor;
 
@@ -35,6 +34,7 @@ layout(binding = 5) uniform sampler2D normal_sampler[32];
 layout(binding = 6) uniform sampler2D material_sampler[32];
 layout(binding = 7) uniform sampler2D emission_sampler[32];
 
+//-----------------------------------------------------------------
 
 vec2 sample_spherical_map(vec3 v)
 {
@@ -45,50 +45,113 @@ vec2 sample_spherical_map(vec3 v)
     return uv;
 }
 
+//-----------------------------------------------------------------
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}  
+
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+	
+    float num   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+	
+    return num / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float num   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+	
+    return num / denom;
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+	
+    return ggx1 * ggx2;
+}
+
+//-----------------------------------------------------------------
+
 void main() {
-    // proprties
-    float gamma = 1;
-    float exposure = .3;
+    const float gamma = 1;
+    const float exposure = .3;
     
-    float rough = mesh.roughness;
-    float metal = mesh.metalliness;
-
     vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
-    vec3 material = mesh.material_id == -1? vec3(0, rough, metal) : texture(material_sampler[mesh.material_id], inTexcoord).rgb;
+    vec3 emission = mesh.emission_id == -1? vec3(0) : texture(emission_sampler[mesh.emission_id], inTexcoord).rgb;
 
-    // normal
-    vec3 normal = inNormal;
-    //normal = 2 * texture(normal_sampler[mesh.normal_id], inTexcoord).rgb - 1;
-    //normal = normalize(inTBN * normal);
+    float ao = mesh.material_id == -1? 1.0 : texture(material_sampler[mesh.material_id], inTexcoord).r;
+    float rough = mesh.material_id == -1? mesh.roughness : texture(material_sampler[mesh.material_id], inTexcoord).g;
+    float metal = mesh.material_id == -1? mesh.metalliness : texture(material_sampler[mesh.material_id], inTexcoord).b;
 
     vec3 light_color = vec3(0.6);
-    vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view)
-    
-    //-------------------------------
-    // ambient color;
-    vec3 ambient_color = light_color * 0.01;
-    
-    //diffuse color
-    float brightness = max(dot(normal, light_dir), 0.0);
-    vec3 diffuse_color = light_color * brightness;
+    //vec3 light_dir = normalize(inViewPos - inPosition); // light direction (from view to fragment)
+    //vec3 normal = inNormal;
 
-    // specular color
-    float specular_str = 1.0 - material.y; // roughness
-    vec3 I = normalize(inViewPos - inPosition); // to what fragment camera is looking (direction)
-    vec3 R = reflect(-light_dir, normal);
-    float spec = pow(max(dot(I, R), 0.0), 64);
-    vec3 specular_color = specular_str * spec * vec3(1.0);  
-
+    //-----------------
+    vec3 Lo = vec3(0.0);
+    vec3 N = normalize(inNormal); 
+    vec3 V = normalize(inViewPos - inPosition);
+    //-----------------
     // reflect color
-    vec2 uv = sample_spherical_map( reflect(-I, normal) );
-    vec3 reflection_color = texture(enviroment_sampler, uv).rgb;
+    vec2 uv = sample_spherical_map( reflect(-V, N) );
+    vec3 reflection_color = texture(enviroment_sampler, uv).rgb//texture(enviroment_sampler, uv).rgb;
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // exposure tone mapping
     mapped = pow(mapped, vec3(1.0 / gamma)); // gamma correction 
+    //-----------------
+    // loop start
+    vec3 L = normalize(inViewPos - inPosition); // light
+    vec3 H = normalize(V + L);
 
-    // combined
-    vec3 color = (ambient_color + diffuse_color + specular_color) * albedo;
-    //vec3 result = color * (1-metal) + (mapped * metal);
+    float dist = length(inViewPos - inPosition);
+    float attenuation = 1.0 / (dist * dist);
+    vec3 radiance = light_color * attenuation; 
 
-    vec3 result = color * (1-material.z) + (mapped * material.z);
-    outColor = vec4(result, 1.0);
+    // Fresnel-Schlick
+    vec3 F0 = vec3(0.04); 
+    F0 = mix(F0, albedo, metal);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    float NDF = DistributionGGX(N, H, rough);       
+    float G   = GeometrySmith(N, V, L, rough); 
+
+    vec3 numerator    = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+    vec3 specular     = numerator / max(denominator, 0.001);
+
+    vec3 kS = F; // reflect
+    vec3 kD = vec3(1.0) - kS; // defract
+    
+    kD *= 1.0 - metal;	
+
+    float NdotL = max(dot(N, L), 0.0);        
+    Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+
+    // end loop
+
+    // ambient color
+    vec3 ambient = vec3(0.03) * albedo * ao;
+    vec3 color   = ambient + Lo; 
+
+    // tone mapping
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2)); 
+
+    outColor = vec4(color, 1.0);
 }

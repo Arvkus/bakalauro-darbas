@@ -22,10 +22,10 @@ public:
     Region region;
 
     struct Pixels{
-        std::vector<char> albedo;
-        std::vector<char> normal;
-        std::vector<char> material;
-        std::vector<char> emission;
+        std::vector<uint8_t> albedo;
+        std::vector<uint8_t> normal;
+        std::vector<uint8_t> material;
+        std::vector<uint8_t> emission;
     } pixels;
 
     struct UniformMeshStruct{
@@ -164,16 +164,16 @@ public:
                 vkDestroyImageView(instance->device, descriptors->normal_image_views[tex], nullptr);
                 descriptors->normal_image_views[tex] = descriptors->normal.return_image_view(tex);
 
-                /*
-                for(uint32_t i = 0; i < mesh.pixels.normal.size()/3; i=i+3){
-                    uint32_t r = mesh.pixels.normal[i+0];
-                    uint32_t g = mesh.pixels.normal[i+1];
-                    uint32_t b = mesh.pixels.normal[i+2];
-                    uint32_t a = mesh.pixels.normal[i+3];
-                    glm::vec4 color = glm::vec4(r,g,b,a);
+                
+                for(uint32_t i = 0; i < mesh.pixels.normal.size()/4; i=i+4){
+                    float r = (float)mesh.pixels.normal[i+0]/255;
+                    float g = (float)mesh.pixels.normal[i+1]/255;
+                    float b = (float)mesh.pixels.normal[i+2]/255;
+                    float a = (float)mesh.pixels.normal[i+3]/255;
+                    //glm::vec3 color = glm::normalize(glm::vec3(r,g,b)) *2 - glm::vec3(1,1,1);
                     //msg::error(color);
                 }
-                */
+                
 
             }
             

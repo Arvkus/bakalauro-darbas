@@ -195,7 +195,7 @@ private:
     //----------------------------------------------------
     /// get primitive's texture pixel data
 
-    std::vector<char> get_texture_pixels(uint32_t texture_index)
+    std::vector<uint8_t> get_texture_pixels(uint32_t texture_index)
     {
         int width = 0, height = 0, channel = 0;
         stbi_uc* pixels;
@@ -222,8 +222,8 @@ private:
         }
 
         // resize and write to pixel buffer
-        std::vector<char> pixel_buffer(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
-        stbir_resize_uint8(pixels, width , height , 0, (unsigned char*)pixel_buffer.data(), MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
+        std::vector<uint8_t> pixel_buffer(MAX_IMAGE_SIZE * MAX_IMAGE_SIZE * 4);
+        stbir_resize_uint8(pixels, width , height , 0, (uint8_t*)pixel_buffer.data(), MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 0, 4);
         stbi_image_free(pixels);
         return pixel_buffer;
     } 
