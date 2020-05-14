@@ -95,16 +95,6 @@ public:
                 mesh.vertices[i0].bitangent = glm::normalize(bitangent);
                 mesh.vertices[i1].bitangent = glm::normalize(bitangent);
                 mesh.vertices[i2].bitangent = glm::normalize(bitangent);
-
-                //msg::error(mesh.vertices[i0].normal, glm::cross(mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent));
-                //msg::error(mesh.vertices[i0].normal, mesh.vertices[i0].bitangent, mesh.vertices[i0].tangent);
-
-                /*
-                vec3 T = normalize(vec3(mesh.cframe * vec4(inTangent,   0.0)));
-                vec3 B = normalize(vec3(mesh.cframe * vec4(inBitangent, 0.0)));
-                vec3 N = normalize(vec3(mesh.cframe * vec4(inNormal,    0.0)));
-                mat3 TBN = transpose(mat3(T, B, N));
-                */
             }
         }
         for(Node& node : children) node.calculate_vertex_TBN();
@@ -148,8 +138,6 @@ public:
         cframe_offset *= this->cframe; 
         for(Mesh& mesh : meshes)
         {   
-            msg::printl(mesh.uniform.metalliness, " ", mesh.uniform.roughness);
-
             // image buffers
             if(mesh.uniform.albedo_id != -1)
             {
@@ -165,18 +153,6 @@ public:
                 descriptors->normal.fill_memory(MAX_IMAGE_SIZE, MAX_IMAGE_SIZE, 4, mesh.pixels.normal.data(), tex);
                 vkDestroyImageView(instance->device, descriptors->normal_image_views[tex], nullptr);
                 descriptors->normal_image_views[tex] = descriptors->normal.return_image_view(tex);
-
-                
-                for(uint32_t i = 0; i < mesh.pixels.normal.size()/4; i=i+4){
-                    float r = (float)mesh.pixels.normal[i+0]/255;
-                    float g = (float)mesh.pixels.normal[i+1]/255;
-                    float b = (float)mesh.pixels.normal[i+2]/255;
-                    float a = (float)mesh.pixels.normal[i+3]/255;
-                    //glm::vec3 color = glm::normalize(glm::vec3(r,g,b)) *2 - glm::vec3(1,1,1);
-                    //msg::error(color);
-                }
-                
-
             }
             
             if(mesh.uniform.material_id != -1)
@@ -202,26 +178,10 @@ public:
 
         for(Node& node : children) node.update_dynamic_buffer(instance, descriptors, cframe_offset);
     }
-
-    // debug ----------------------------------------------------
-    void gap(int n){for(int i=0;i<n;i++)msg::print("  ");}
-    void iterate(int depth = 0){
-        gap(depth); msg::highlight(this->name);
-        
-        for(Mesh& mesh : meshes){ 
-            gap(depth+1); 
-            //msg::printl();
-        }
-
-        for(Node& node : children) node.iterate(depth+1);
-    }
-
 };
 
 class Model{
 private:
-    Image albedo_buffer;
-    Image material_buffer;
     Buffer indices;
     Buffer vertices;
 
@@ -231,10 +191,12 @@ private:
         VkDeviceSize size;
 
         size = sizeof(uint32_t) * this->total_indices_size;
+        if(size == 0) throw std::runtime_error("model buffer is empty");
         indices.init(instance);
         indices.create_buffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
         size = sizeof(Vertex) * this->total_vertices_size;
+        if(size == 0) throw std::runtime_error("model buffer is empty");
         vertices.init(instance);
         vertices.create_buffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -256,7 +218,6 @@ public:
         create_buffers(instance);
         for(Node& node : nodes) node.update_dynamic_buffer(instance, descriptors);
         for(Node& node : nodes) node.get_draw_info(infos);
-        //for(Node& node : nodes) node.iterate();
     }
 
     // 3

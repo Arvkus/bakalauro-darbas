@@ -57,6 +57,7 @@ uint64_t timestamp_nano()
 
 //-------------------------------------------------------------------
 /// Position, normal, texture
+
 struct Vertex
 {
 	Vertex(){};
@@ -123,7 +124,9 @@ struct UniformCameraStruct {
 };
 
 struct UniformPropertiesStruct{
-	float exposure;
+	alignas(4) float gamma = 1.0;
+	alignas(4) float exposure = 0.3;
+	alignas(4) int map = 0;
 };
 
 struct Region{
@@ -142,8 +145,6 @@ struct Region{
 // vec2 - 8
 // vec3/4 - 16
 // mat4 - 16
-
-
 
 //-------------------------------------------------------------------
         
@@ -360,6 +361,5 @@ namespace msg{
 		SetConsoleTextAttribute(H_CONSOLE, msg::Color::White);
 	}
 }
-
 
 //-------------------------------------------------------------------

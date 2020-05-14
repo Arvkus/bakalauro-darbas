@@ -26,17 +26,15 @@ public:
         if(!is_presented) RECREATE_SWAPCHAIN = true; // recreate_swapchain();
     }
 
-    Model model;
-    Model skybox;
-
     void init_vulkan(GLFWwindow* window)
     {   
         this->instance.init(window);
         this->descriptors.init(&this->instance);
 
         this->render_pass = create_render_pass(&this->instance);
-        this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
-        this->pipeline.create_graphics_pipeline();
+
+        this->model_pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
+        this->model_pipeline.create_graphics_pipeline();
 
         this->skybox_pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
         this->skybox_pipeline.create_skybox_pipeline();
@@ -49,7 +47,7 @@ public:
         skybox.prepare_model(&this->instance, &this->descriptors);
         
         //model = loader.load("models/crate.glb");
-        model = loader.load("models/material.glb");
+        model = loader.load("models/cube.glb");
         //model = loader.load("models/tests/NormalTangentTest.glb");
         model.prepare_model(&this->instance, &this->descriptors);
 
@@ -74,13 +72,13 @@ public:
         
         // destroy outdated objects
         this->swapchain.destroy();
-        this->pipeline.destroy();
+        this->model_pipeline.destroy();
         this->skybox_pipeline.destroy();
         vkDestroyCommandPool(instance.device, command_pool, nullptr);
 
         // recreate objects
-        this->pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
-        this->pipeline.create_graphics_pipeline();
+        this->model_pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
+        this->model_pipeline.create_graphics_pipeline();
 
         this->skybox_pipeline.init(&this->instance, &this->descriptors, &this->render_pass);
         this->skybox_pipeline.create_skybox_pipeline();
@@ -101,7 +99,7 @@ public:
         this->descriptors.destroy();
         
         this->skybox_pipeline.destroy();
-        this->pipeline.destroy();
+        this->model_pipeline.destroy();
 
         enviroment_image.destroy();
         skybox.destroy();
@@ -115,12 +113,16 @@ public:
 
 private:
     Instance instance;
-    Pipeline pipeline; 
+    Pipeline model_pipeline; 
     Pipeline skybox_pipeline;
     Descriptors descriptors;
     Swapchain swapchain;
     VkRenderPass render_pass;
 
+    Model model;
+    Model skybox;
+
+    UniformPropertiesStruct properties = UniformPropertiesStruct(); 
     Camera camera = Camera();
 
     VkCommandPool command_pool;
@@ -164,7 +166,6 @@ private:
     
 
     //---------------------------------------------------------------------------------
-    float exposure = 0.3;
     void update_uniform_buffer(uint32_t current_image)
     {
         camera.move();
@@ -175,9 +176,9 @@ private:
 
         UniformCameraStruct ubo = {};
         ubo.view = camera.cframe(); // glm::translate(glm::mat4(1.0), glm::vec3(0,0,-4));
-        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.001f, 100.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.05f, 500.0f);
 
-        UniformPropertiesStruct properties; // ...
+        // ...
 
         descriptors.view_buffer.fill_memory(&ubo, sizeof(ubo));
     }
@@ -243,12 +244,12 @@ private:
             //------------------------------------------
             
             vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->skybox_pipeline.graphics_pipeline);
-            skybox.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
+            skybox.draw(&command_buffers[i], &skybox_pipeline.pipeline_layout, &descriptors);
             
             //------------------------------------------
             
-            vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline.graphics_pipeline);
-            model.draw(&command_buffers[i], &pipeline.pipeline_layout, &descriptors);
+            vkCmdBindPipeline(command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->model_pipeline.graphics_pipeline);
+            model.draw(&command_buffers[i], &model_pipeline.pipeline_layout, &descriptors);
             
             //------------------------------------------
             vkCmdEndRenderPass(command_buffers[i]);

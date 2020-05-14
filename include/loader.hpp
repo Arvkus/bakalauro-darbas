@@ -1,13 +1,8 @@
 #pragma once
 #include "common.hpp"
-using json = nlohmann::json;
-
-// https://wiki.fileformat.com/3d/glb/
-// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0
-// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#properties-reference
-//------------------------------------------------------------------------------
 
 class Loader{
+    using json = nlohmann::json;
 private:
 
     enum TYPE { GLB, GLTF };
@@ -389,7 +384,6 @@ private:
         // 0x4E4F534A - JSON chunk type
         // 0x004E4942 - Bin chunk type 
 
-        uint64_t start_time = timestamp_milli();
         std::ifstream file(path, std::ifstream::binary);
         uint32_t chunk_length, chunk_type;
         
@@ -436,7 +430,6 @@ private:
         std::ofstream out("debug.json");
         out << content.dump(4); out.close();
 
-        
         //-------------------------------
         // read binary buffers
 
@@ -452,10 +445,7 @@ private:
         Model model;
         model.nodes = build_nodes(content["scenes"][0]["nodes"]);
 
-        
-        msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
         return model;
-
     }
 
     //----------------------------------------------------
@@ -491,7 +481,7 @@ public:
 
     Model load(std::string path)
     {
-        
+        uint64_t start_time = timestamp_milli();
         Model model;
         std::string type;
 
@@ -521,6 +511,7 @@ public:
         model.total_vertices_size = this->counter.vertices;
         this->counter.reset();
 
+        msg::print("Time to create model: ", (float)(timestamp_milli() - start_time)/1000, "\n");
         return model;
     }
 };

@@ -13,7 +13,9 @@ layout(location = 3) in vec3 inViewPos;
 layout(location = 0) out vec4 outColor;
 
 layout(binding = 1) uniform Properties {
+    float gamma;
     float exposure;
+    int map;
 } properties;
 
 layout(binding = 2) uniform Mesh {
@@ -59,9 +61,9 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-    float a      = roughness*roughness;
-    float a2     = a*a;
-    float NdotH  = max(dot(N, H), 0.0);
+    float a = roughness*roughness;
+    float a2 = a*a;
+    float NdotH = max(dot(N, H), 0.0);
     float NdotH2 = NdotH*NdotH;
 	
     float num   = a2;
@@ -76,7 +78,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     float r = (roughness + 1.0);
     float k = (r*r) / 8.0;
 
-    float num   = NdotV;
+    float num = NdotV;
     float denom = NdotV * (1.0 - k) + k;
 	
     return num / denom;
@@ -85,20 +87,20 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
 	
     return ggx1 * ggx2;
 }
 //-----------------------------------------------------------------
 
 void main() {
-    const float gamma = 1;
+    const float gamma = 2.2;
     const float exposure = .3;
     vec3 light_color = vec3(1.0);
     
     vec3 albedo = mesh.albedo_id == -1? mesh.base_color : texture(albedo_sampler[mesh.albedo_id], inTexcoord).rgb;
-    albedo = pow(albedo, vec3(2.2));
+    albedo = pow(albedo, vec3(gamma));
     vec3 emission = mesh.emission_id == -1? vec3(0.0) : texture(emission_sampler[mesh.emission_id], inTexcoord).rgb;
 
     float ao = mesh.material_id == -1? 1.0 : texture(material_sampler[mesh.material_id], inTexcoord).r;
@@ -122,21 +124,21 @@ void main() {
     vec3 reflection_color = texture(enviroment_sampler, uv).rgb; //texture(enviroment_sampler, uv).rgb;
     vec3 mapped = vec3(1.0) - exp(-reflection_color * exposure); // exposure tone mapping
     //mapped = pow(mapped, vec3(1.0 / gamma)); // gamma correction 
-    mapped = pow(mapped, vec3(2.2));
+    //mapped = pow(mapped, vec3(2.2));
 
     //-----------------
     // loop start
     vec3 L = normalize(inViewPos - inPosition); // light
     vec3 H = normalize(V + L);
 
-    float distance    = 5; //length(inViewPos - inPosition);
+    float distance = 10*exposure; //length(inViewPos - inPosition);
     float attenuation = 1.0 / (distance * distance);
-    vec3 radiance     = light_color * attenuation;        
+    vec3 radiance = light_color * attenuation;        
     
     // cook-torrance brdf
     float NDF = DistributionGGX(N, H, rough);        
-    float G   = GeometrySmith(N, V, L, rough);      
-    vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
+    float G = GeometrySmith(N, V, L, rough);      
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);       
     
     vec3 kS = F; // defraction (reflect)
     vec3 kD = vec3(1.0) - kS; // refraction
@@ -150,12 +152,12 @@ void main() {
     float NdotL = max(dot(N, L), 0.0);                
     Lo += (kD * albedo / PI + specular) * radiance * NdotL; 
     
-    vec3 diffuse    =  albedo * 0.5;
-    vec3 ambient    = (kD * diffuse) * ao; 
+    vec3 diffuse =  albedo * 0.5;
+    vec3 ambient = (kD * diffuse) * ao; 
     vec3 color = ambient + Lo + kS*metal*mapped;
 
     color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2)) * max(dot(N, V), 0.0);
+    color = pow(color, vec3(1.0/gamma)) * max(dot(N, V), 0.05);
    
     outColor = vec4(color + emission, 1.0);
 }

@@ -6,7 +6,9 @@ layout(location = 0) in vec3 inUVW;
 layout(location = 0) out vec4 outColor;
 
 layout(binding = 1) uniform Properties {
+    float gamma;
     float exposure;
+    int map;
 } properties;
 
 layout(binding = 3) uniform sampler2D enviroment_sampler;
@@ -21,14 +23,12 @@ vec2 sample_spherical_map(vec3 v)
 }
 
 void main() {
+    const float gamma = 2.2;
+    const float exposure = 0.3; // inExposure;
+
     vec2 uv = sample_spherical_map(normalize(inUVW)); // make sure to normalize localPos
     vec3 color = texture(enviroment_sampler, uv).rgb;
-
-    const float gamma = 1;
-    const float exposure = 0.3; // inExposure;
-  
     vec3 mapped = vec3(1.0) - exp(-color * exposure); // Exposure tone mapping
-    mapped = pow(mapped, vec3(1.0 / gamma)); // Gamma correction 
     
     outColor = vec4(mapped, 1.0);
 }
