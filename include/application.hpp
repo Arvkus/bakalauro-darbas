@@ -299,6 +299,3 @@ private:
         msg::printl("enviroment created");
     }    
 };
-
-// https://hdrihaven.com/hdri/?c=night&h=pond_bridge_night
-//https://github.com/SaschaWillems/Vulkan/blob/master/examples/texturecubemap/texturecubemap.cpp

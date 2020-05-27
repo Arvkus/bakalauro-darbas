@@ -1,8 +1,6 @@
 #include "common.hpp"
 #include "descriptors.hpp"
 
-// https://archive.org/embed/GDC2014Bilodeau
-
 struct MeshDrawInfo{
     uint32_t id = 0;
 	uint32_t vertex_offset = 0;

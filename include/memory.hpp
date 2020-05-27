@@ -3,9 +3,6 @@
 #include "common.hpp"
 #include "instance.hpp"
 
-// https://stackoverflow.com/questions/42595473/correct-usage-of-unique-ptr-in-class-member
-//--------------------------------------------------------------------------------------------
-
 class MemoryObject
 {
 public:

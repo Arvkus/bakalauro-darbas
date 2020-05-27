@@ -52,7 +52,7 @@ const uint32_t MAX_IMAGE_SIZE = 512;
 const uint32_t DYNAMIC_DESCRIPTOR_SIZE = 256;
 
 bool APP_DEBUG = false;
-const char* TITLE = "Vulkan window";
+const char* TITLE = "VkVisualiser";
 const int MAX_FRAMES_IN_FLIGHT = 2;
 bool APP_RUNNING = true;
 bool RECREATE_SWAPCHAIN = false;
